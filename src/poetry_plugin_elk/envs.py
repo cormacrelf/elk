@@ -35,7 +35,8 @@ def tags(
 
 def macos_tags(f: FixedConfig, darwin: DarwinConfig) -> Iterator[Tag]:
     arch = "arm64" if darwin.arch == "aarch64" else darwin.arch
-    return tags(f, darwin.abis, mac_platforms(version=darwin.macos_version, arch=arch))
+    platforms = list(mac_platforms(version=darwin.macos_version, arch=arch))
+    return tags(f, darwin.abis, platforms)
 
 
 def manylinux(archs: Iterable[str], linux: LinuxConfig) -> Iterator[str]:
@@ -112,7 +113,7 @@ def linux_tags(
     f: FixedConfig,
     linux: LinuxConfig,
 ) -> Iterator[Tag]:
-    platforms = linux_platforms(linux)
+    platforms = list(linux_platforms(linux))
     return tags(f, linux.abis, platforms)
 
 

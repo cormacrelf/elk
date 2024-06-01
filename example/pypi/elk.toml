@@ -57,6 +57,9 @@ file_name = "BUCK" # default
 # Load the macros to which the rules above will resolve.
 buckfile_imports = """
 load(":platform.bzl", "platform")
+
+# A target for aliases to resolve to on unsupported platforms
+filegroup(name = "null", srcs = [])
 """
 
 # Need a wrapper for alias that will evaluate the `platforms` attribute.

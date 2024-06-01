@@ -179,3 +179,64 @@ platform.alias(
     ],
 )
 
+remote_file(
+    name = "polars-0.20.30-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    url = "https://files.pythonhosted.org/packages/c6/b5/40e452ce05a01a7cde60bbbc86e9103ef0cbc1354832a3c7ccd0daf5591a/polars-0.20.30-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    sha256 = "510f708332a0e0d563a5bac266c11ccd12932606c7331bf28f7173cf669d0c69",
+)
+
+prebuilt_python_library(
+    name = "polars-0.20.30-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl-built",
+    binary_src = ":polars-0.20.30-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    deps = [],
+)
+
+remote_file(
+    name = "polars-0.20.30-cp38-abi3-manylinux_2_24_aarch64.whl",
+    url = "https://files.pythonhosted.org/packages/f4/b1/d8e5611e87fdf38641078c9ab343bbc56c58e1c3ce910a8a438c7e360570/polars-0.20.30-cp38-abi3-manylinux_2_24_aarch64.whl",
+    sha256 = "70d58b89cf9902fb5c3506afef76c5c2b247581d0991b082bcdc6d73d983aa2b",
+)
+
+prebuilt_python_library(
+    name = "polars-0.20.30-cp38-abi3-manylinux_2_24_aarch64.whl-built",
+    binary_src = ":polars-0.20.30-cp38-abi3-manylinux_2_24_aarch64.whl",
+    deps = [],
+)
+
+remote_file(
+    name = "polars-0.20.30-cp38-abi3-macosx_10_12_x86_64.whl",
+    url = "https://files.pythonhosted.org/packages/bf/ce/8bb26a399b9400a7eed3fef184ddda5f395c91b0a4e46b21fca3c430964d/polars-0.20.30-cp38-abi3-macosx_10_12_x86_64.whl",
+    sha256 = "7802cb8a6d3fa0fadf446bf19b61ef8450b81229766f1817980bc6e0b2488c03",
+)
+
+prebuilt_python_library(
+    name = "polars-0.20.30-cp38-abi3-macosx_10_12_x86_64.whl-built",
+    binary_src = ":polars-0.20.30-cp38-abi3-macosx_10_12_x86_64.whl",
+    deps = [],
+)
+
+remote_file(
+    name = "polars-0.20.30-cp38-abi3-macosx_11_0_arm64.whl",
+    url = "https://files.pythonhosted.org/packages/51/f3/d0fc09f268c674c0e647c4d2228a787b407307b18ce0b12a8a1db097783a/polars-0.20.30-cp38-abi3-macosx_11_0_arm64.whl",
+    sha256 = "0d7278f6e12e6623c8ee6e637d866b96b69f960b358125c955ac76abeb942192",
+)
+
+prebuilt_python_library(
+    name = "polars-0.20.30-cp38-abi3-macosx_11_0_arm64.whl-built",
+    binary_src = ":polars-0.20.30-cp38-abi3-macosx_11_0_arm64.whl",
+    deps = [],
+)
+
+platform.alias(
+    name = "polars",
+    actual = {
+        "linux-x86_64": ":polars-0.20.30-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl-built",
+        "linux-arm64": ":polars-0.20.30-cp38-abi3-manylinux_2_24_aarch64.whl-built",
+        "macos-x86_64": ":polars-0.20.30-cp38-abi3-macosx_10_12_x86_64.whl-built",
+        "macos-arm64": ":polars-0.20.30-cp38-abi3-macosx_11_0_arm64.whl-built",
+    },
+    visibility = [
+        "PUBLIC",
+    ],
+)
+

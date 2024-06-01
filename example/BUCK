@@ -15,5 +15,6 @@ python_binary(
     deps = [
         # keep sorted
         "//pypi:numpy",
+        "//pypi:polars",
     ],
 )

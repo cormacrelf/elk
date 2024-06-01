@@ -9,6 +9,7 @@ numpy = "1.26.4"
 pyarrow = "^16.0.0"
 cowsay = "^6.1"
 colorama = "^0.4.6"
+polars = "^0.20.30"
 
 [build-system]
 requires = ["poetry-core"]

@@ -22,6 +22,18 @@ prebuilt_python_library(
 )
 
 remote_file(
+    name = "numpy-1.26.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+    url = "https://files.pythonhosted.org/packages/79/f8/97f10e6755e2a7d027ca783f63044d5b1bc1ae7acb12afe6a9b4286eac17/numpy-1.26.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+    sha256 = "9fad7dcb1aac3c7f0584a5a8133e3a43eeb2fe127f47e3632d43d677c66c102b",
+)
+
+prebuilt_python_library(
+    name = "numpy-1.26.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl-built",
+    binary_src = ":numpy-1.26.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+    deps = [],
+)
+
+remote_file(
     name = "numpy-1.26.4-cp312-cp312-macosx_10_9_x86_64.whl",
     url = "https://files.pythonhosted.org/packages/95/12/8f2020a8e8b8383ac0177dc9570aad031a3beb12e38847f7129bacd96228/numpy-1.26.4-cp312-cp312-macosx_10_9_x86_64.whl",
     sha256 = "b3ce300f3644fb06443ee2222c2201dd3a89ea6040541412b8fa189341847218",
@@ -49,7 +61,7 @@ platform.alias(
     name = "numpy",
     actual = {
         "linux-x86_64": ":numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl-built",
-        "linux-arm64": ":numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl-built",
+        "linux-arm64": ":numpy-1.26.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl-built",
         "macos-x86_64": ":numpy-1.26.4-cp312-cp312-macosx_10_9_x86_64.whl-built",
         "macos-arm64": ":numpy-1.26.4-cp312-cp312-macosx_11_0_arm64.whl-built",
     },
@@ -67,6 +79,20 @@ remote_file(
 prebuilt_python_library(
     name = "pyarrow-16.0.0-cp312-cp312-manylinux_2_28_x86_64.whl-built",
     binary_src = ":pyarrow-16.0.0-cp312-cp312-manylinux_2_28_x86_64.whl",
+    deps = [
+        ":numpy",
+    ],
+)
+
+remote_file(
+    name = "pyarrow-16.0.0-cp312-cp312-manylinux_2_28_aarch64.whl",
+    url = "https://files.pythonhosted.org/packages/59/a5/02fcff287ca45e8e95d414475f2dbad5bb9f762fa6f3c5e02def855ccfcc/pyarrow-16.0.0-cp312-cp312-manylinux_2_28_aarch64.whl",
+    sha256 = "42e56557bc7c5c10d3e42c3b32f6cff649a29d637e8f4e8b311d334cc4326730",
+)
+
+prebuilt_python_library(
+    name = "pyarrow-16.0.0-cp312-cp312-manylinux_2_28_aarch64.whl-built",
+    binary_src = ":pyarrow-16.0.0-cp312-cp312-manylinux_2_28_aarch64.whl",
     deps = [
         ":numpy",
     ],
@@ -104,7 +130,7 @@ platform.alias(
     name = "pyarrow",
     actual = {
         "linux-x86_64": ":pyarrow-16.0.0-cp312-cp312-manylinux_2_28_x86_64.whl-built",
-        "linux-arm64": ":pyarrow-16.0.0-cp312-cp312-manylinux_2_28_x86_64.whl-built",
+        "linux-arm64": ":pyarrow-16.0.0-cp312-cp312-manylinux_2_28_aarch64.whl-built",
         "macos-x86_64": ":pyarrow-16.0.0-cp312-cp312-macosx_10_15_x86_64.whl-built",
         "macos-arm64": ":pyarrow-16.0.0-cp312-cp312-macosx_11_0_arm64.whl-built",
     },

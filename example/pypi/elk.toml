@@ -21,7 +21,7 @@ manylib2014_compatible = true
 
 [platform.linux-arm64]
 platform = "linux"
-arch = "x86_64"
+arch = "aarch64"                # must be aarch64 on linux
 abi = ["cp312", "abi3", "none"]
 glibc_version = [2, 38]
 manylib2014_compatible = true
@@ -34,7 +34,7 @@ macos_version = [13, 0]
 
 [platform.macos-arm64]
 platform = "darwin"
-arch = "arm64"
+arch = "arm64"                  # must be arm64 on macos
 abi = ["cp312", "abi3", "none"]
 macos_version = [13, 0]
 

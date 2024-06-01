@@ -1,7 +1,5 @@
 # Elk example
 
-To try:
-
 Prerequisites:
 - `pipx` and `pipx install poetry`
 - A recent `buck2`, roughly 
@@ -10,6 +8,7 @@ Prerequisites:
 
 1. Install the elk plugin. From this repository root, run
 
+       pipx install poetry
        pipx inject poetry .
 
 2. In the `example/pypi` folder, run

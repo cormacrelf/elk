@@ -3,7 +3,11 @@ authors = ["Cormac Relf <web@cormacrelf.net>"]
 description = ""
 name = "poetry-plugin-elk"
 readme = "README.md"
+license = "MIT"
 version = "0.1.0"
+repository = "https://github.com/cormacrelf/elk"
+
+packages = [{ include = "poetry_plugin_elk", from = "src" }]
 
 [tool.poetry.dependencies]
 poetry = "^1.8.3"

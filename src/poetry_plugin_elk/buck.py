@@ -235,3 +235,4 @@ class BUCK:
         for target in self.targets.values():
             file.write(str(target))
             file.write("\n")
+            file.write("\n")

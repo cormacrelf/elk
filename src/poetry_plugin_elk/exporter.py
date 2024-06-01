@@ -51,13 +51,9 @@ class Exporter:
             project_python_marker=root.python_marker,
             extras=self._extras,
         ):
-            line = ""
-            self._io.write_error_line(str(dependency_package.dependency))
-
             if not with_extras:
                 dependency_package = dependency_package.without_features()
 
-            dependency = dependency_package.dependency
             package = dependency_package.package
 
             if package.develop and not allow_editable:
@@ -67,12 +63,6 @@ class Exporter:
                     " constraints.txt format.</warning>"
                 )
                 continue
-
-            requirement = dependency.to_pep_508(with_extras=False, resolved=True)
-            is_direct_local_reference = (
-                dependency.is_file() or dependency.is_directory()
-            )
-            is_direct_remote_reference = dependency.is_vcs() or dependency.is_url()
 
             deps = [buck.TargetName(dep.name) for dep in package.all_requires]
 
@@ -116,30 +106,6 @@ class Exporter:
                 rule=self._config.buck.alias, name=package.name, actual=platform_actual
             )
             BUCK.push(alias)
-
-            if is_direct_remote_reference:
-                line = requirement
-            elif is_direct_local_reference:
-                assert dependency.source_url is not None
-                dependency_uri = path_to_url(dependency.source_url)
-                if package.develop:
-                    line = f"-e {dependency_uri}"
-                else:
-                    line = f"{package.complete_name} @ {dependency_uri}"
-            else:
-                line = f"{package.complete_name}=={package.version}"
-
-            if not is_direct_remote_reference and ";" in requirement:
-                markers = requirement.split(";", 1)[1].strip()
-                if markers:
-                    line += f" ; {markers}"
-
-            if (
-                not is_direct_remote_reference
-                and not is_direct_local_reference
-                and package.source_url
-            ):
-                self._io.write_line(package.source_url.rstrip("/"))
 
         # only open the file (& truncate it) when we get this far
         with open(self._config.buck.file_name, "w+") as output:

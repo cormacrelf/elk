@@ -6,7 +6,7 @@ package-mode = false
 [tool.poetry.dependencies]
 python = "^3.12"
 numpy = "1.26.4"
-pyarrow = "16.0.0"
+pyarrow = "^16.0.0"
 cowsay = "^6.1"
 colorama = "^0.4.6"
 

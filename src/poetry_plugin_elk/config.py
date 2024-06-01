@@ -1,4 +1,4 @@
-from typing import Iterable, NamedTuple, Optional
+from typing import Iterable, NamedTuple
 from packaging.tags import MacVersion, PythonVersion
 
 import tomllib

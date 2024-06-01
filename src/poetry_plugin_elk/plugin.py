@@ -29,9 +29,12 @@ class CustomCommand(InstallerCommand):
     def handle(self) -> int:
         # self.installer.lock(update=False)
         # self.installer.dry_run(dry_run=True)
-        config_path = Path("elk.toml")
+        config_path = self.poetry.pyproject_path.parent / Path("elk.toml")
         with open(config_path, "rb") as config_file:
             config = parse_toml(config_file)
+            output_path = self.poetry.pyproject_path.parent / Path(
+                config.buck.file_name
+            )
 
         locker = self.poetry.locker
         if not locker.is_locked():
@@ -61,7 +64,7 @@ class CustomCommand(InstallerCommand):
                     f"Extra [{', '.join(sorted(invalid_extras))}] is not specified."
                 )
         exporter = Exporter(self.poetry, self.io, self.installer.executor, config)
-        return exporter.with_extras(extras).run()
+        return exporter.with_extras(extras).run(output_path)
 
 
 class Elk(ApplicationPlugin):

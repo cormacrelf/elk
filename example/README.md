@@ -28,3 +28,10 @@ Prerequisites:
    The dependencies for :main are in `example/BUCK`.
    If you added a dependency in poetry, you'll have to add it as 
    `//pypi:some_pkg` in there.
+
+   Note that it might get annoying switching into a subdirectory to run 
+   `poetry` commands. You can instead stay in `example/` and run
+
+       poetry -C pypi add polars
+       poetry -C pypi elk
+       buck2 run :main

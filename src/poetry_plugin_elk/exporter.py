@@ -33,9 +33,7 @@ class Exporter:
         self._extras = extras
         return self
 
-    def run(self) -> int:
-        from poetry.core.packages.utils.utils import path_to_url
-
+    def run(self, output_path: Path) -> int:
         with_extras = True
         allow_editable = False
 
@@ -109,7 +107,7 @@ class Exporter:
             BUCK.push(alias)
 
         # only open the file (& truncate it) when we get this far
-        with open(self._config.buck.file_name, "w+") as output:
+        with open(output_path, "w+") as output:
             output.write(self._config.buck.generated_file_header)
             output.write("\n")
             output.write(self._config.buck.buckfile_imports)

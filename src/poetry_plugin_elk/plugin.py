@@ -16,7 +16,6 @@ class CustomCommand(InstallerCommand):
     name = "elk"
 
     options = [
-        option("output", "o", "The name of the output file.", flag=False),
         option(
             "extras",
             "E",

@@ -1,0 +1,24 @@
+# vim: set ft=ini :
+[cells]
+root = .
+prelude = __prelude__
+toolchains = toolchains
+shim = shim
+
+[external_cells]
+prelude = bundled
+
+[repository_aliases]
+# used for config//os:none etc
+config = prelude
+# yeet these into the black hole
+fbcode = shim
+fbsource = shim
+fbcode_macros = shim
+buck = shim
+
+[project]
+ignore = .git
+
+[parser]
+target_platform_detector_spec = target:root//...->prelude//platforms:default

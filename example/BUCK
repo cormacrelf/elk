@@ -1,0 +1,114 @@
+load(":poetry.bzl", "python")
+
+remote_file(
+    name = "numpy-1.26.4-cp312-cp312-macosx_11_0_arm64.whl",
+    url = "https://files.pythonhosted.org/packages/75/5b/ca6c8bd14007e5ca171c7c03102d17b4f4e0ceb53957e8c44343a9546dcc/numpy-1.26.4-cp312-cp312-macosx_11_0_arm64.whl",
+    sha256 = "03a8c78d01d9781b28a6989f6fa1bb2c4f2d51201cf99d3dd875df6fbd96b23b",
+)
+prebuilt_python_library(
+    name = "numpy-1.26.4-cp312-cp312-macosx_11_0_arm64.whl-built",
+    binary_src = ":numpy-1.26.4-cp312-cp312-macosx_11_0_arm64.whl",
+    deps = [],
+)
+remote_file(
+    name = "numpy-1.26.4-cp312-cp312-macosx_10_9_x86_64.whl",
+    url = "https://files.pythonhosted.org/packages/95/12/8f2020a8e8b8383ac0177dc9570aad031a3beb12e38847f7129bacd96228/numpy-1.26.4-cp312-cp312-macosx_10_9_x86_64.whl",
+    sha256 = "b3ce300f3644fb06443ee2222c2201dd3a89ea6040541412b8fa189341847218",
+)
+prebuilt_python_library(
+    name = "numpy-1.26.4-cp312-cp312-macosx_10_9_x86_64.whl-built",
+    binary_src = ":numpy-1.26.4-cp312-cp312-macosx_10_9_x86_64.whl",
+    deps = [],
+)
+remote_file(
+    name = "numpy-1.26.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+    url = "https://files.pythonhosted.org/packages/79/f8/97f10e6755e2a7d027ca783f63044d5b1bc1ae7acb12afe6a9b4286eac17/numpy-1.26.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+    sha256 = "9fad7dcb1aac3c7f0584a5a8133e3a43eeb2fe127f47e3632d43d677c66c102b",
+)
+prebuilt_python_library(
+    name = "numpy-1.26.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl-built",
+    binary_src = ":numpy-1.26.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+    deps = [],
+)
+remote_file(
+    name = "numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    url = "https://files.pythonhosted.org/packages/0f/50/de23fde84e45f5c4fda2488c759b69990fd4512387a8632860f3ac9cd225/numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    sha256 = "675d61ffbfa78604709862923189bad94014bef562cc35cf61d3a07bba02a7ed",
+)
+prebuilt_python_library(
+    name = "numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl-built",
+    binary_src = ":numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+    deps = [],
+)
+python.alias(
+    name = "numpy",
+    platform = {
+        "macos-arm64": ":numpy-1.26.4-cp312-cp312-macosx_11_0_arm64.whl-built",
+        "macos-x86_64": ":numpy-1.26.4-cp312-cp312-macosx_10_9_x86_64.whl-built",
+        "linux-arm64": ":numpy-1.26.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl-built",
+        "linux-aarch64": ":numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl-built",
+    },
+    visibility = [
+        "PUBLIC",
+    ],
+)
+remote_file(
+    name = "pyarrow-16.0.0-cp312-cp312-macosx_11_0_arm64.whl",
+    url = "https://files.pythonhosted.org/packages/ff/5a/d538f1ef43432bbd15b1fe70a2efe4a5681a9502263b88554d2dc5b648a3/pyarrow-16.0.0-cp312-cp312-macosx_11_0_arm64.whl",
+    sha256 = "20ce707d9aa390593ea93218b19d0eadab56390311cb87aad32c9a869b0e958c",
+)
+prebuilt_python_library(
+    name = "pyarrow-16.0.0-cp312-cp312-macosx_11_0_arm64.whl-built",
+    binary_src = ":pyarrow-16.0.0-cp312-cp312-macosx_11_0_arm64.whl",
+    deps = [
+        ":numpy",
+    ],
+)
+remote_file(
+    name = "pyarrow-16.0.0-cp312-cp312-macosx_10_15_x86_64.whl",
+    url = "https://files.pythonhosted.org/packages/0f/64/7a94bec6658873c7d82f743a92653bcc961eda95480827bd46d2d33003be/pyarrow-16.0.0-cp312-cp312-macosx_10_15_x86_64.whl",
+    sha256 = "fb8065dbc0d051bf2ae2453af0484d99a43135cadabacf0af588a3be81fbbb9b",
+)
+prebuilt_python_library(
+    name = "pyarrow-16.0.0-cp312-cp312-macosx_10_15_x86_64.whl-built",
+    binary_src = ":pyarrow-16.0.0-cp312-cp312-macosx_10_15_x86_64.whl",
+    deps = [
+        ":numpy",
+    ],
+)
+remote_file(
+    name = "pyarrow-16.0.0-cp312-cp312-manylinux_2_28_aarch64.whl",
+    url = "https://files.pythonhosted.org/packages/59/a5/02fcff287ca45e8e95d414475f2dbad5bb9f762fa6f3c5e02def855ccfcc/pyarrow-16.0.0-cp312-cp312-manylinux_2_28_aarch64.whl",
+    sha256 = "42e56557bc7c5c10d3e42c3b32f6cff649a29d637e8f4e8b311d334cc4326730",
+)
+prebuilt_python_library(
+    name = "pyarrow-16.0.0-cp312-cp312-manylinux_2_28_aarch64.whl-built",
+    binary_src = ":pyarrow-16.0.0-cp312-cp312-manylinux_2_28_aarch64.whl",
+    deps = [
+        ":numpy",
+    ],
+)
+remote_file(
+    name = "pyarrow-16.0.0-cp312-cp312-manylinux_2_28_x86_64.whl",
+    url = "https://files.pythonhosted.org/packages/b6/1c/2c196290d83a680d381e25c4072bf49120f8b7fc5c7c633638575811a0b5/pyarrow-16.0.0-cp312-cp312-manylinux_2_28_x86_64.whl",
+    sha256 = "2a7abdee4a4a7cfa239e2e8d721224c4b34ffe69a0ca7981354fe03c1328789b",
+)
+prebuilt_python_library(
+    name = "pyarrow-16.0.0-cp312-cp312-manylinux_2_28_x86_64.whl-built",
+    binary_src = ":pyarrow-16.0.0-cp312-cp312-manylinux_2_28_x86_64.whl",
+    deps = [
+        ":numpy",
+    ],
+)
+python.alias(
+    name = "pyarrow",
+    platform = {
+        "macos-arm64": ":pyarrow-16.0.0-cp312-cp312-macosx_11_0_arm64.whl-built",
+        "macos-x86_64": ":pyarrow-16.0.0-cp312-cp312-macosx_10_15_x86_64.whl-built",
+        "linux-arm64": ":pyarrow-16.0.0-cp312-cp312-manylinux_2_28_aarch64.whl-built",
+        "linux-aarch64": ":pyarrow-16.0.0-cp312-cp312-manylinux_2_28_x86_64.whl-built",
+    },
+    visibility = [
+        "PUBLIC",
+    ],
+)

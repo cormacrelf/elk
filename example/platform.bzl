@@ -7,6 +7,6 @@ def _alias(name, **kwargs):
     platform = kwargs.pop("platform", {})
     return prelude.alias(name = name, actual = actual or platform["macos-arm64"], **kwargs)
 
-python = struct(
+platform = struct(
     alias = _alias,
 )

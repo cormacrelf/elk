@@ -88,11 +88,11 @@ file_name = "BUCK" # default
 
 # Load the macros to which the rules above will resolve.
 buckfile_imports = """
-load(":alias.bzl", "python_platform_alias")
+load(":platform.bzl", "platform")
 """
 
 # Need a wrapper for alias that will evaluate the `platforms` attribute.
-alias = "platform_alias"
+alias = "platform.alias"
 prebuilt_python_library = "prebuilt_python_library"
 python_library = "python_library"
 

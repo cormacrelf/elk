@@ -10,23 +10,7 @@ cpython = true
 
 # Platforms we want to support.
 #
-# A Reindeer platform is a collection of predicates, which are closely related
-# to rustc/cargo's notion of a platform. If a conditional dependency matches
-# against a platform's predicates, then it is included in the platform-specific
-# dependencies in the rule.
-#
-# These same platforms and predicates are used in fixups.toml files, for
-# platform-specific fixups (such as additional dependencies, extra sources,
-# options, etc).
-#
-# Listed properties are a set of values, any of which can match a predicate.
-# These match specific configurations of rustc, as shown with `rustc --target
-# <TARGET> --print cfg`. Unlisted properties are "don't care" or "match
-# anything"
-#
-# The platform key sets the name of the platform in `platform_deps` /
-# `named_platform_deps`. If it is "DEFAULT" then the platform's dependencies are
-# put into the normal `deps` / `named_deps`.
+# These are essentially PyPi wheel selectors.
 
 [platform.linux-x86_64]
 platform = "linux"
@@ -55,22 +39,6 @@ abi = ["cp312", "abi3", "none"]
 mac_version = [13, 0]
 
 # Windows not supported yet
-#
-# # Windows with MSVC toolchain - x86_64-pc-windows-msvc
-# [platform.windows-msvc]
-# x86_64-pc-windows-msvc = []
-# target_family = ["windows"]
-# target_os = ["windows"]
-# target_env = ["msvc"]
-# target_arch = ["x86_64"]
-#
-# # Windows with GNU toolchain - x86_64-pc-windows-gnu
-# [platform.windows-gnu]
-# x86_64-pc-windows-gnu = []
-# target_family = ["windows"]
-# target_os = ["windows"]
-# target_env = ["gnu"]
-# target_arch = ["x86_64"]
 
 # Configuration for poetry (used for resolving dependencies)
 [poetry]

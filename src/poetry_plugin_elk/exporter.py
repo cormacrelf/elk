@@ -86,20 +86,21 @@ class Exporter:
                     )
                     BUCK.push(built)
                 else:
-                    target = buck.SourceArchive(package=package, link=link)
-                    BUCK.push(target)
-                    built = buck.SourceBuild(
-                        package=package, source=target.target_name(), deps=deps
-                    )
-                    BUCK.push(built)
-                    # self._io.write_error_line(
-                    #     f"<warning>Could not choose a wheel for package {package}, for config {conf}</warning>"
+                    # target = buck.SourceArchive(package=package, link=link)
+                    # BUCK.push(target)
+                    # built = buck.SourceBuild(
+                    #     package=package, source=target.target_name(), deps=deps
                     # )
-                    # for link in chooser._get_links(package):
-                    #     self._io.write_error_line(
-                    #         "<error>    " + link.filename + "</error>"
-                    #     )
-                    # return 1
+                    # BUCK.push(built)
+                    self._io.write_error_line(
+                        f"<error>Could not choose a wheel for package {package}, for config {plat}</error>"
+                    )
+                    self._io.write_error_line(f"<error>Available wheels:</error>")
+                    for link in chooser._get_links(package):
+                        self._io.write_error_line(
+                            "<error>    " + link.filename + "</error>"
+                        )
+                    return 1
                 platform_actual[plat.name] = built.target_name()
 
             alias = buck.Alias(

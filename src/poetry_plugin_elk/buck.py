@@ -174,7 +174,7 @@ class SourceBuild(Target):
         self.deps = deps
         super().__init__(
             "python_library",
-            ["deps", "exclude_deps_from_merged_linking"],
+            ["srcs", "deps", "exclude_deps_from_merged_linking"],
             **kwargs,
         )
 

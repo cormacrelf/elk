@@ -1,0 +1,18 @@
+[tool.poetry]
+authors = ["Cormac Relf <web@cormacrelf.net>"]
+description = ""
+name = "poetry-plugin-elk"
+readme = "README.md"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+poetry = "^1.8.3"
+python = "^3.11"
+poetry-plugin-export = "^1.8.0"
+
+[tool.poetry.plugins."poetry.application.plugin"]
+poetry_plugin_elk = "poetry_plugin_elk.plugin:Elk"
+
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]

@@ -61,14 +61,16 @@ def parse_toml(file) -> ElkConfig:
     for name, config in data["platform"].items():
         platform_name = config.get("platform")
         if platform_name == "darwin":
+            arch = "arm64" if config["arch"] == "aarch64" else config["arch"]
             platform = DarwinConfig(
                 macos_version=tuple(list(config["macos_version"])[0:2]),
-                arch=config["arch"],
+                arch=arch,
                 abis=config["abi"],
             )
         elif platform_name == "linux":
+            arch = "aarch64" if config["arch"] == "arm64" else config["arch"]
             platform = LinuxConfig(
-                arch=config["arch"],
+                arch=arch,
                 abis=config["abi"],
                 glibc_version=tuple(list(config["glibc_version"])[0:2]),
                 manylinux1_compatible=config.get("manylib1_compatible", False),

@@ -1,4 +1,4 @@
-from typing import Iterable, NamedTuple
+from typing import Iterable, NamedTuple, Optional
 from packaging.tags import MacVersion, PythonVersion
 
 import tomllib
@@ -31,14 +31,27 @@ class Platform(NamedTuple):
     platform: DarwinConfig | LinuxConfig
 
 
+class BuckConfig(NamedTuple):
+    file_name: str = "BUCK"
+    buckfile_imports: str = ""
+    # there's no good default for this yet
+    alias: str = "alias"
+    prebuilt_python_library: str = "prebuilt_python_library"
+    python_library: str = "python_library"
+    generated_file_header: str = ""
+
+
 class ElkConfig(NamedTuple):
     python: FixedConfig
     platforms: list[Platform]
+    buck: BuckConfig
 
 
 def parse_toml(file) -> ElkConfig:
     data = tomllib.load(file)
     platforms = []
+
+    buck = BuckConfig(**data.get("buck", {}))
 
     fixed = FixedConfig(
         python_version=tuple(data["python"]["version"]),
@@ -66,4 +79,4 @@ def parse_toml(file) -> ElkConfig:
             raise ValueError(f"Unsupported platform: {platform_name}")
 
         platforms.append(Platform(name=name, fixed=fixed, platform=platform))
-    return ElkConfig(python=fixed, platforms=platforms)
+    return ElkConfig(python=fixed, platforms=platforms, buck=buck)

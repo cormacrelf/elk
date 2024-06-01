@@ -63,8 +63,7 @@ class CustomCommand(InstallerCommand):
                     f"Extra [{', '.join(sorted(invalid_extras))}] is not specified."
                 )
         exporter = Exporter(self.poetry, self.io, self.installer.executor, config)
-        output = self.option("output") or self.io
-        return exporter.run(output)
+        return exporter.run()
 
 
 class Elk(ApplicationPlugin):

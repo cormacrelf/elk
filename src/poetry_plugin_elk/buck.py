@@ -143,14 +143,19 @@ class WheelBuild(Target):
     deps: list[TargetName]
 
     def __init__(
-        self, package: Package, binary_src: TargetName, deps: list[TargetName], **kwargs
+        self,
+        rule: str,
+        package: Package,
+        binary_src: TargetName,
+        deps: list[TargetName],
+        **kwargs,
     ):
         self.name = binary_src.name + "-built"
         self.package = package
         self.binary_src = binary_src
         self.deps = deps
         super().__init__(
-            "prebuilt_python_library",
+            rule,
             ["binary_src", "deps", "exclude_deps_from_merged_linking"],
             **kwargs,
         )
@@ -191,7 +196,7 @@ class Alias(Target):
     actual: Optional[TargetName]
     platform: Optional[dict[str, TargetName]]
 
-    def __init__(self, name: str, actual: dict[str, TargetName], **kwargs):
+    def __init__(self, rule: str, name: str, actual: dict[str, TargetName], **kwargs):
         self.name = name
         self.visibility = ["PUBLIC"]
         if len(actual) > 0:
@@ -201,7 +206,7 @@ class Alias(Target):
             else:
                 self.platform = actual
 
-        super().__init__("python.alias", ["actual", "platform"], **kwargs)
+        super().__init__(rule, ["actual", "platform"], **kwargs)
 
 
 def coalesce():
@@ -227,7 +232,6 @@ class BUCK:
         self.targets[name] = target
 
     def dump(self, file: TextIOWrapper | IO):
-        file.write('load(":poetry.bzl", "python")\n\n')
         for target in self.targets.values():
             file.write(str(target))
             file.write("\n")

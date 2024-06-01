@@ -1,8 +1,6 @@
-from io import TextIOWrapper
 from pathlib import Path
 from typing import Collection, Iterable, Optional
 from cleo.io.io import IO
-from packaging.tags import platform_tags
 from packaging.utils import NormalizedName
 from poetry.core.packages.dependency_group import MAIN_GROUP
 from poetry.installation.executor import Chooser, Executor
@@ -35,19 +33,13 @@ class Exporter:
         self._extras = extras
         return self
 
-    def run(self, output: IO | str) -> int:
+    def run(self) -> int:
         from poetry.core.packages.utils.utils import path_to_url
 
         with_extras = True
         allow_editable = False
 
         BUCK = buck.BUCK()
-
-        _output: IO | TextIOWrapper
-        if type(output) is IO:
-            _output = output
-        else:
-            _output = open(str(output), "w+")
 
         root = self._poetry.package.with_dependency_groups(
             list(self._groups), only=True
@@ -97,7 +89,10 @@ class Exporter:
                     target = buck.WheelDownload(package=package, link=link)
                     BUCK.push(target)
                     built = buck.WheelBuild(
-                        package=package, binary_src=target.target_name(), deps=deps
+                        rule=self._config.buck.prebuilt_python_library,
+                        package=package,
+                        binary_src=target.target_name(),
+                        deps=deps,
                     )
                     BUCK.push(built)
                 else:
@@ -117,7 +112,9 @@ class Exporter:
                     # return 1
                 platform_actual[plat.name] = built.target_name()
 
-            alias = buck.Alias(name=package.name, actual=platform_actual)
+            alias = buck.Alias(
+                rule=self._config.buck.alias, name=package.name, actual=platform_actual
+            )
             BUCK.push(alias)
 
             if is_direct_remote_reference:
@@ -144,10 +141,12 @@ class Exporter:
             ):
                 self._io.write_line(package.source_url.rstrip("/"))
 
-        BUCK.dump(_output)
-
-        if type(_output) is TextIOWrapper:
-            _output.flush()
-            _output.close()
+        # only open the file (& truncate it) when we get this far
+        with open(self._config.buck.file_name, "w+") as output:
+            output.write(self._config.buck.generated_file_header)
+            output.write("\n")
+            output.write(self._config.buck.buckfile_imports)
+            output.write("\n")
+            BUCK.dump(output)
 
         return 0

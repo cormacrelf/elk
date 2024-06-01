@@ -1,7 +1,9 @@
 # Elk
 
-Like [`reindeer`](https://github.com/facebookincubator/reindeer) but for
-Python + [Poetry](https://python-poetry.org) dependencies.
+Generate [Buck](https://buck2.build) build files from Python + 
+[Poetry](https://python-poetry.org) dependencies.
+
+Much like [`reindeer`](https://github.com/facebookincubator/reindeer).
 
 
 ### Status: experimental

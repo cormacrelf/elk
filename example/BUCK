@@ -8,3 +8,12 @@ python_binary(
         "//pypi:numpy",
     ],
 )
+
+python_binary(
+    name = "other",
+    main = "other.py",
+    deps = [
+        # keep sorted
+        "//pypi:numpy",
+    ],
+)

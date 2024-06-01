@@ -22,6 +22,24 @@ pipx inject poetry .
 Just follow along with the `example` folder. You'll probably want to copy the 
 `elk.toml` and `platform.bzl` files.
 
+### Use buck2 to assemble the virtualenv for e.g. code completion
+
+See `example/venv.sh`.
+
+Configure `pyright` as usual, then:
+
+```sh
+cd example
+./venv.sh :main nvim main.py
+```
+
+Your editor will reflect the dependencies added in example/BUCK.
+So if you edit the other target, you won't get access to the packages
+`cowsay` and `colorama`:
+
+```sh
+./venv.sh :other nvim other.py
+```
 
 ### Using the poetry virtualenv for e.g. code completion
 
@@ -36,7 +54,6 @@ Or otherwise use poetry to enter a shell with the virtualenv in it.
 If you have a lot of python packages, and you've used `elk`
 to place all their dependencies in a single BUCK file, then you will
 get too many packages available in your language server, but Buck will
-still precisely set up the paths when you `buck2 run`.
+still precisely set up the paths when you `buck2 run`. Overall this might
+be less annoying than getting the virtualenv path from buck.
 
-If you want your editor to exactly reflect the dependencies added,
-then I'm sure we can make Buck build a virtualenv using a BXL script.

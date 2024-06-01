@@ -20,7 +20,7 @@ class LinuxConfig(NamedTuple):
 
 
 class DarwinConfig(NamedTuple):
-    mac_version: MacVersion
+    macos_version: MacVersion
     arch: str
     abis: Iterable[str]
 
@@ -62,7 +62,7 @@ def parse_toml(file) -> ElkConfig:
         platform_name = config.get("platform")
         if platform_name == "darwin":
             platform = DarwinConfig(
-                mac_version=tuple(config["mac_version"]),
+                macos_version=tuple(list(config["macos_version"])[0:2]),
                 arch=config["arch"],
                 abis=config["abi"],
             )
@@ -70,7 +70,7 @@ def parse_toml(file) -> ElkConfig:
             platform = LinuxConfig(
                 arch=config["arch"],
                 abis=config["abi"],
-                glibc_version=tuple(config["glibc_version"]),
+                glibc_version=tuple(list(config["glibc_version"])[0:2]),
                 manylinux1_compatible=config.get("manylib1_compatible", False),
                 manylinux2010_compatible=config.get("manylib2010_compatible", False),
                 manylinux2014_compatible=config.get("manylib2014_compatible", False),

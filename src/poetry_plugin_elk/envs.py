@@ -35,7 +35,7 @@ def tags(
 
 def macos_tags(f: FixedConfig, darwin: DarwinConfig) -> Iterator[Tag]:
     arch = "arm64" if darwin.arch == "aarch64" else darwin.arch
-    return tags(f, darwin.abis, mac_platforms(version=darwin.mac_version, arch=arch))
+    return tags(f, darwin.abis, mac_platforms(version=darwin.macos_version, arch=arch))
 
 
 def manylinux(archs: Iterable[str], linux: LinuxConfig) -> Iterator[str]:
@@ -150,7 +150,7 @@ EXAMPLE_CONFIGS = [
         name="macos-arm64",
         fixed=_fixed,
         platform=DarwinConfig(
-            mac_version=(13, 0),
+            macos_version=(13, 0),
             arch="arm64",
             abis=_abis,
         ),
@@ -159,7 +159,7 @@ EXAMPLE_CONFIGS = [
         name="macos-x86_64",
         fixed=_fixed,
         platform=DarwinConfig(
-            mac_version=(13, 0),
+            macos_version=(13, 0),
             arch="x86_64",
             abis=_abis,
         ),

@@ -30,13 +30,13 @@ manylib2014_compatible = true
 platform = "darwin"
 arch = "x86_64"
 abi = ["cp312", "abi3", "none"]
-mac_version = [13, 0]
+macos_version = [13, 0]
 
 [platform.macos-arm64]
 platform = "darwin"
 arch = "arm64"
 abi = ["cp312", "abi3", "none"]
-mac_version = [13, 0]
+macos_version = [13, 0]
 
 # Windows not supported yet
 

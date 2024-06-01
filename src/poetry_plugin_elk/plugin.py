@@ -7,7 +7,6 @@ from poetry.console.commands.installer_command import InstallerCommand
 from poetry.console.commands.command import Command
 
 from packaging.utils import NormalizedName, canonicalize_name
-from poetry.installation.executor import Install, Link
 
 from poetry_plugin_elk.exporter import Exporter
 from poetry_plugin_elk.config import parse_toml

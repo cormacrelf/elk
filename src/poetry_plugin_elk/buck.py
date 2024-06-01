@@ -48,7 +48,7 @@ class TargetName(NamedTuple):
     def __str__(self) -> str:
         return f":{self.name}"
 
-    def toJSON(self, _i: int):
+    def toJSON(self, _: int):
         return f'":{self.name}"'
 
 

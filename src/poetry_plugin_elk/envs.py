@@ -1,4 +1,4 @@
-from typing import Iterable, Iterator, NamedTuple
+from typing import Iterable, Iterator
 from packaging.tags import (
     Tag,
     compatible_tags,
@@ -42,7 +42,7 @@ def manylinux(archs: Iterable[str], linux: LinuxConfig) -> Iterator[str]:
     from packaging.tags import _manylinux
 
     # From PEP 513, PEP 600
-    def _is_compatible(arch: str, version: _manylinux._GLibCVersion) -> bool:
+    def _is_compatible(_: str, version: _manylinux._GLibCVersion) -> bool:
         # sys_glibc = _get_glibc_version()
         # if sys_glibc < version:
         #     return False

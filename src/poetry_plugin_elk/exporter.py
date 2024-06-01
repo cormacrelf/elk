@@ -11,7 +11,8 @@ from poetry.poetry import Poetry
 from poetry_plugin_export.walker import get_project_dependency_packages
 
 from poetry_plugin_elk import buck
-from poetry_plugin_elk.envs import EXAMPLE_CONFIGS
+from poetry_plugin_elk.config import ElkConfig
+from poetry_plugin_elk.envs import to_env
 
 
 class Exporter:
@@ -19,13 +20,16 @@ class Exporter:
     io: IO
     _output: Optional[Path]
 
-    def __init__(self, poetry: Poetry, io: IO, executor: Executor) -> None:
+    def __init__(
+        self, poetry: Poetry, io: IO, executor: Executor, config: ElkConfig
+    ) -> None:
         self._poetry = poetry
         self._io = io
         self._output = None
         self._extras: Collection[NormalizedName] = ()
         self._groups: Iterable[str] = [MAIN_GROUP]
         self._executor: Executor = executor
+        self._config: ElkConfig = config
 
     def with_extras(self, extras: Collection[NormalizedName]) -> "Exporter":
         self._extras = extras
@@ -82,8 +86,8 @@ class Exporter:
 
             alias: buck.Alias
             platform_actual = {}
-            for conf in EXAMPLE_CONFIGS:
-                env = conf.to_env()
+            for plat in self._config.platforms:
+                env = to_env(plat)
                 c = self._executor._chooser
                 chooser = Chooser(c._pool, env, c._config)
                 link = chooser.choose_for(package)
@@ -111,7 +115,7 @@ class Exporter:
                     #         "<error>    " + link.filename + "</error>"
                     #     )
                     # return 1
-                platform_actual[conf.name] = built.target_name()
+                platform_actual[plat.name] = built.target_name()
 
             alias = buck.Alias(name=package.name, actual=platform_actual)
             BUCK.push(alias)
@@ -140,10 +144,10 @@ class Exporter:
             ):
                 self._io.write_line(package.source_url.rstrip("/"))
 
-            if type(_output) is TextIOWrapper:
-                _output.flush()
-                _output.close()
-
         BUCK.dump(_output)
+
+        if type(_output) is TextIOWrapper:
+            _output.flush()
+            _output.close()
 
         return 0

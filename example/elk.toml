@@ -6,6 +6,7 @@
 [python]
 version = [3, 12]
 interpreter = "cp312" # CPython 3.12 compatible
+cpython = true
 
 # Platforms we want to support.
 #
@@ -27,33 +28,31 @@ interpreter = "cp312" # CPython 3.12 compatible
 # `named_platform_deps`. If it is "DEFAULT" then the platform's dependencies are
 # put into the normal `deps` / `named_deps`.
 
-# x86_64-unknown-linux-gnu
 [platform.linux-x86_64]
-platform = "linux"
-arch = ["x86_64"]
-abi = ["cp312", "abi3", "none"]
-glibc_version = [2, 38]
-manylib2014_compatible = true
-
-# aarch64-unknown-linux-gnu
-[platform.linux-arm64]
-platform = "linux"
-arch = ["x86_64"]
-abi = ["cp312", "abi3", "none"]
-glibc_version = [2, 38]
-manylib2014_compatible = true
-
-# macOS - x86_64-apple-darwin
-[platform.macos-x86_64]
 platform = "linux"
 arch = "x86_64"
 abi = ["cp312", "abi3", "none"]
+glibc_version = [2, 38]
+manylib2014_compatible = true
 
-# macOS - arm64-apple-darwin
+[platform.linux-arm64]
+platform = "linux"
+arch = "x86_64"
+abi = ["cp312", "abi3", "none"]
+glibc_version = [2, 38]
+manylib2014_compatible = true
+
+[platform.macos-x86_64]
+platform = "darwin"
+arch = "x86_64"
+abi = ["cp312", "abi3", "none"]
+mac_version = [13, 0]
+
 [platform.macos-arm64]
 platform = "darwin"
 arch = "arm64"
 abi = ["cp312", "abi3", "none"]
+mac_version = [13, 0]
 
 # Windows not supported yet
 #

@@ -10,6 +10,7 @@ from packaging.utils import NormalizedName, canonicalize_name
 from poetry.installation.executor import Install, Link
 
 from poetry_plugin_elk.exporter import Exporter
+from poetry_plugin_elk.config import parse_toml
 
 
 class CustomCommand(InstallerCommand):
@@ -30,6 +31,9 @@ class CustomCommand(InstallerCommand):
     def handle(self) -> int:
         # self.installer.lock(update=False)
         # self.installer.dry_run(dry_run=True)
+        config_path = Path("elk.toml")
+        with open(config_path, "rb") as config_file:
+            config = parse_toml(config_file)
 
         locker = self.poetry.locker
         if not locker.is_locked():
@@ -58,7 +62,7 @@ class CustomCommand(InstallerCommand):
                 raise ValueError(
                     f"Extra [{', '.join(sorted(invalid_extras))}] is not specified."
                 )
-        exporter = Exporter(self.poetry, self.io, self.installer.executor)
+        exporter = Exporter(self.poetry, self.io, self.installer.executor, config)
         output = self.option("output") or self.io
         return exporter.run(output)
 

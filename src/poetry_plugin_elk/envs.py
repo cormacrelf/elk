@@ -1,7 +1,5 @@
 from typing import Iterable, Iterator, NamedTuple
 from packaging.tags import (
-    MacVersion,
-    PythonVersion,
     Tag,
     compatible_tags,
     cpython_tags,
@@ -10,26 +8,7 @@ from packaging.tags import (
 )
 from poetry.utils.env import MockEnv
 
-
-class FixedConfig(NamedTuple):
-    python_version: PythonVersion
-    interpreter: str
-    cpython: bool
-
-
-class LinuxConfig(NamedTuple):
-    arch: str
-    abis: Iterable[str]
-    glibc_version: tuple[int, int]
-    manylinux1_compatible: bool
-    manylinux2010_compatible: bool
-    manylinux2014_compatible: bool
-
-
-class DarwinConfig(NamedTuple):
-    mac_version: MacVersion
-    arch: str
-    abis: Iterable[str]
+from poetry_plugin_elk.config import FixedConfig, DarwinConfig, LinuxConfig, Platform
 
 
 def tags(
@@ -137,26 +116,21 @@ def linux_tags(
     return tags(f, linux.abis, platforms)
 
 
-class Config(NamedTuple):
-    name: str
-    fixed: FixedConfig
-    platform: DarwinConfig | LinuxConfig
-
-    def to_env(self) -> MockEnv:
-        if type(self.platform) is DarwinConfig:
-            return MockEnv(
-                platform="darwin",
-                platform_machine=self.platform.arch,
-                supported_tags=list(macos_tags(self.fixed, self.platform)),
-            )
-        elif type(self.platform) is LinuxConfig:
-            return MockEnv(
-                platform="linux",
-                platform_machine=self.platform.arch,
-                supported_tags=list(linux_tags(self.fixed, self.platform)),
-            )
-        else:
-            raise Exception("self.platform was neither LinuxConfig nor DarwinConfig")
+def to_env(plat) -> MockEnv:
+    if type(plat.platform) is DarwinConfig:
+        return MockEnv(
+            platform="darwin",
+            platform_machine=plat.platform.arch,
+            supported_tags=list(macos_tags(plat.fixed, plat.platform)),
+        )
+    elif type(plat.platform) is LinuxConfig:
+        return MockEnv(
+            platform="linux",
+            platform_machine=plat.platform.arch,
+            supported_tags=list(linux_tags(plat.fixed, plat.platform)),
+        )
+    else:
+        raise Exception("plat.platform was neither LinuxConfig nor DarwinConfig")
 
 
 _fixed = FixedConfig(
@@ -172,7 +146,7 @@ _linux = {
 }
 
 EXAMPLE_CONFIGS = [
-    Config(
+    Platform(
         name="macos-arm64",
         fixed=_fixed,
         platform=DarwinConfig(
@@ -181,7 +155,7 @@ EXAMPLE_CONFIGS = [
             abis=_abis,
         ),
     ),
-    Config(
+    Platform(
         name="macos-x86_64",
         fixed=_fixed,
         platform=DarwinConfig(
@@ -190,14 +164,14 @@ EXAMPLE_CONFIGS = [
             abis=_abis,
         ),
     ),
-    Config(
+    Platform(
         name="linux-arm64",
         fixed=_fixed,
         platform=LinuxConfig(
             arch="aarch64", abis=_abis, glibc_version=(2, 38), **_linux
         ),
     ),
-    Config(
+    Platform(
         name="linux-aarch64",
         fixed=_fixed,
         platform=LinuxConfig(

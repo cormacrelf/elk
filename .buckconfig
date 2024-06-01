@@ -1,0 +1,13 @@
+# vim: set ft=ini :
+[cells]
+root = .
+prelude = __prelude__
+config = prelude
+toolchains = toolchains
+fbsource = shim
+fbcode = shim
+buck = shim
+
+[external_cells]
+prelude = bundled
+

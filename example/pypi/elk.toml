@@ -11,6 +11,22 @@ cpython = true
 # Platforms we want to support.
 #
 # These are essentially PyPi wheel selectors.
+#
+# The names ('linux-x86_64' etc) are mapped to Buck select({}) calls
+# using platform.bzl. The wheel selectors here should match which
+# operating systems / glibc versions / etc are being used when the
+# select({}) statements therein evaluate to True.
+#
+# platform.bzl uses
+#
+#     load("@prelude//rust:cargo_package.bzl", "DEFAULT_PLATFORM_TEMPLATES")
+#
+# as the default dictionary of platform templates.
+# But you can create your own by pulling that dictionary from the prelude and
+# modifying `platform.bzl`.
+#
+# As for the attributes, they are used to generate long lists of compatible tags.
+# The first matching wheel is used for each platform.
 
 [platform.linux-x86_64]
 platform = "linux"

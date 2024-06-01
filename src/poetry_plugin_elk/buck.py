@@ -193,8 +193,7 @@ class Alias(Target):
 
     """
 
-    actual: Optional[TargetName]
-    platform: Optional[dict[str, TargetName]]
+    actual: TargetName | dict[str, TargetName]
 
     def __init__(self, rule: str, name: str, actual: dict[str, TargetName], **kwargs):
         self.name = name
@@ -204,9 +203,9 @@ class Alias(Target):
             if all(map(lambda v: v.name == first.name, actual.values())):
                 self.actual = first
             else:
-                self.platform = actual
+                self.actual = actual
 
-        super().__init__(rule, ["actual", "platform"], **kwargs)
+        super().__init__(rule, ["actual"], **kwargs)
 
 
 def coalesce():

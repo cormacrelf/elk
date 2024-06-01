@@ -23,8 +23,8 @@ def apply_platform_attr(
 
 def _alias(name, **kwargs):
     actual = kwargs.pop("actual", ":null")
-    platform = kwargs.pop("platform", {})
-    actual = apply_platform_attr(platform, actual)
+    if type(actual) == "dict":
+        actual = apply_platform_attr(actual, ":null")
     return prelude.alias(name = name, actual = actual, **kwargs)
 
 platform = struct(

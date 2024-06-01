@@ -47,7 +47,7 @@ prebuilt_python_library(
 
 platform.alias(
     name = "numpy",
-    platform = {
+    actual = {
         "linux-x86_64": ":numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl-built",
         "linux-arm64": ":numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl-built",
         "macos-x86_64": ":numpy-1.26.4-cp312-cp312-macosx_10_9_x86_64.whl-built",
@@ -102,7 +102,7 @@ prebuilt_python_library(
 
 platform.alias(
     name = "pyarrow",
-    platform = {
+    actual = {
         "linux-x86_64": ":pyarrow-16.0.0-cp312-cp312-manylinux_2_28_x86_64.whl-built",
         "linux-arm64": ":pyarrow-16.0.0-cp312-cp312-manylinux_2_28_x86_64.whl-built",
         "macos-x86_64": ":pyarrow-16.0.0-cp312-cp312-macosx_10_15_x86_64.whl-built",

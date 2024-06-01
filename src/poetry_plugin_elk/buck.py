@@ -129,15 +129,16 @@ class WheelDownload(RemoteFile):
         )
 
 
-# much like prebuilt_python_library, which only takes name / binary_src / deps
-#
-#     prebuilt_python_library(
-#       name = "requests",
-#       binary_src = ":requests-blah.whl",
-#     )
-#
-# But relies on a wrapper script to resolve the binary_src
 class WheelBuild(Target):
+    """
+    much like prebuilt_python_library, which only takes name / binary_src / deps
+
+        prebuilt_python_library(
+            name = "requests",
+            binary_src = ":requests-blah.whl",
+        )
+    """
+
     package: Package
     binary_src: TargetName
     deps: list[TargetName]
@@ -185,9 +186,10 @@ class Alias(Target):
 
         python.alias(
             name = "numpy",
-            platform = {
-                "linux-x86_64": ":some-wheel.whl",
-                "macos-arm64": ":some-other-wheel.whl",
+            # or just actual = ":some-wheel.whl-built",
+            actual = {
+                "linux-x86_64": ":some-wheel.whl-built",
+                "macos-arm64": ":some-other-wheel.whl-built",
             },
         )
 

@@ -8,11 +8,11 @@ from packaging.tags import (
 )
 from poetry.utils.env import MockEnv
 
-from poetry_plugin_elk.config import FixedConfig, DarwinConfig, LinuxConfig, Platform
+from poetry_plugin_elk.config import PythonConfig, DarwinConfig, LinuxConfig, Platform
 
 
 def tags(
-    f: FixedConfig, abis: Iterable[str], platforms: Iterable[str]
+    f: PythonConfig, abis: Iterable[str], platforms: Iterable[str]
 ) -> Iterator[Tag]:
     if f.cpython:
         yield from cpython_tags(
@@ -33,7 +33,7 @@ def tags(
     )
 
 
-def macos_tags(f: FixedConfig, darwin: DarwinConfig) -> Iterator[Tag]:
+def macos_tags(f: PythonConfig, darwin: DarwinConfig) -> Iterator[Tag]:
     arch = "arm64" if darwin.arch == "aarch64" else darwin.arch
     platforms = list(mac_platforms(version=darwin.macos_version, arch=arch))
     return tags(f, darwin.abis, platforms)
@@ -110,31 +110,31 @@ def linux_platforms(linux: LinuxConfig) -> Iterator[str]:
 
 
 def linux_tags(
-    f: FixedConfig,
+    f: PythonConfig,
     linux: LinuxConfig,
 ) -> Iterator[Tag]:
     platforms = list(linux_platforms(linux))
     return tags(f, linux.abis, platforms)
 
 
-def to_env(plat) -> MockEnv:
+def to_env(plat: Platform) -> MockEnv:
     if type(plat.platform) is DarwinConfig:
         return MockEnv(
             platform="darwin",
             platform_machine=plat.platform.arch,
-            supported_tags=list(macos_tags(plat.fixed, plat.platform)),
+            supported_tags=list(macos_tags(plat.python, plat.platform)),
         )
     elif type(plat.platform) is LinuxConfig:
         return MockEnv(
             platform="linux",
             platform_machine=plat.platform.arch,
-            supported_tags=list(linux_tags(plat.fixed, plat.platform)),
+            supported_tags=list(linux_tags(plat.python, plat.platform)),
         )
     else:
         raise Exception("plat.platform was neither LinuxConfig nor DarwinConfig")
 
 
-_fixed = FixedConfig(
+_fixed = PythonConfig(
     python_version=(3, 12),
     interpreter="cp312",
     cpython=True,
@@ -149,7 +149,7 @@ _linux = {
 EXAMPLE_CONFIGS = [
     Platform(
         name="macos-arm64",
-        fixed=_fixed,
+        python=_fixed,
         platform=DarwinConfig(
             macos_version=(13, 0),
             arch="arm64",
@@ -158,7 +158,7 @@ EXAMPLE_CONFIGS = [
     ),
     Platform(
         name="macos-x86_64",
-        fixed=_fixed,
+        python=_fixed,
         platform=DarwinConfig(
             macos_version=(13, 0),
             arch="x86_64",
@@ -167,14 +167,14 @@ EXAMPLE_CONFIGS = [
     ),
     Platform(
         name="linux-arm64",
-        fixed=_fixed,
+        python=_fixed,
         platform=LinuxConfig(
             arch="aarch64", abis=_abis, glibc_version=(2, 38), **_linux
         ),
     ),
     Platform(
         name="linux-aarch64",
-        fixed=_fixed,
+        python=_fixed,
         platform=LinuxConfig(
             arch="x86_64", abis=_abis, glibc_version=(2, 38), **_linux
         ),

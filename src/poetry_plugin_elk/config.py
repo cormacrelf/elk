@@ -4,7 +4,7 @@ from packaging.tags import MacVersion, PythonVersion
 import tomllib
 
 
-class FixedConfig(NamedTuple):
+class PythonConfig(NamedTuple):
     python_version: PythonVersion
     interpreter: str
     cpython: bool
@@ -27,7 +27,7 @@ class DarwinConfig(NamedTuple):
 
 class Platform(NamedTuple):
     name: str
-    fixed: FixedConfig
+    python: PythonConfig
     platform: DarwinConfig | LinuxConfig
 
 
@@ -42,7 +42,7 @@ class BuckConfig(NamedTuple):
 
 
 class ElkConfig(NamedTuple):
-    python: FixedConfig
+    python: PythonConfig
     platforms: list[Platform]
     buck: BuckConfig
 
@@ -53,7 +53,7 @@ def parse_toml(file) -> ElkConfig:
 
     buck = BuckConfig(**data.get("buck", {}))
 
-    fixed = FixedConfig(
+    python = PythonConfig(
         python_version=tuple(data["python"]["version"]),
         interpreter=data["python"]["interpreter"],
         cpython=data["python"].get("cpython", True),
@@ -80,5 +80,6 @@ def parse_toml(file) -> ElkConfig:
         else:
             raise ValueError(f"Unsupported platform: {platform_name}")
 
-        platforms.append(Platform(name=name, fixed=fixed, platform=platform))
-    return ElkConfig(python=fixed, platforms=platforms, buck=buck)
+        platforms.append(Platform(name=name, python=python, platform=platform))
+
+    return ElkConfig(python=python, platforms=platforms, buck=buck)

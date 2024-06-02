@@ -1,0 +1,57 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Integration Test
+
+on:
+  push:
+    branches: ["master", "test-ci"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install buck
+        run: |
+          cd $TMPDIR
+          curl -sL -o buck2.zst "https://github.com/facebook/buck2/releases/download/2024-05-15/buck2-x86_64-unknown-linux-gnu.zst"
+          zstd -d buck2.zst
+          chmod +x buck2
+          mkdir -p "$HOME/.local/bin"
+          mv buck2 "$HOME/.local/bin/buck2"
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      # Can't run integration test under a matrix of python versions,
+      # because elk.toml uses [3, 12].
+      #
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.12"
+
+      - name: Install pipx & poetry
+        run: |
+          pip install pipx==1.5.0
+          pipx install poetry
+
+      - name: Install elk's dependencies
+        run: |
+          poetry install
+      - name: Inject elk into poetry
+        run: |
+          pipx inject poetry .
+
+      - name: Check example works as committed in git
+        run: |
+          cd example
+          buck2 run :main
+          buck2 run :other
+
+      - name: Check elk produces the same BUCK file
+        run: |
+          cd example
+          poetry -C pypi elk
+          git diff --exit-code --color=always pypi

@@ -7,7 +7,8 @@ from poetry.installation.executor import Chooser, Executor
 from poetry.poetry import Poetry
 from poetry.utils.wheel import Wheel
 
-from poetry_plugin_export.walker import get_project_dependency_packages
+
+from poetry_plugin_elk.walker import get_project_dependency_packages
 
 from poetry_plugin_elk import buck
 from poetry_plugin_elk.config import ElkConfig

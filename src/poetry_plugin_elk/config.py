@@ -5,7 +5,7 @@ import tomllib
 
 
 class PythonConfig(NamedTuple):
-    python_version: PythonVersion
+    version: PythonVersion
     interpreter: str
     cpython: bool
 
@@ -54,7 +54,7 @@ def parse_toml(file) -> ElkConfig:
     buck = BuckConfig(**data.get("buck", {}))
 
     python = PythonConfig(
-        python_version=tuple(data["python"]["version"]),
+        version=tuple(data["python"]["version"]),
         interpreter=data["python"]["interpreter"],
         cpython=data["python"].get("cpython", True),
     )

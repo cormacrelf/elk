@@ -16,7 +16,7 @@ def tags(
 ) -> Iterator[Tag]:
     if f.cpython:
         yield from cpython_tags(
-            python_version=f.python_version,
+            python_version=f.version,
             abis=abis,
             platforms=platforms,
         )
@@ -27,7 +27,7 @@ def tags(
             platforms=platforms,
         )
     yield from compatible_tags(
-        python_version=f.python_version,
+        python_version=f.version,
         interpreter=f.interpreter,
         platforms=platforms,
     )
@@ -135,7 +135,7 @@ def to_env(plat: Platform) -> MockEnv:
 
 
 _fixed = PythonConfig(
-    python_version=(3, 12),
+    version=(3, 12),
     interpreter="cp312",
     cpython=True,
 )

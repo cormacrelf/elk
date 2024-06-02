@@ -8,16 +8,25 @@ on:
     branches: ["master", "test-ci"]
   pull_request:
     branches: ["master"]
+  schedule:
+    # roughly the day after each new buck2 release tag, which is on the 1st and 15th or so.
+    - cron: "19 23 2,16 * *"
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The bundled prelude is available from about May 2024.
+        # But we also test against the latest buck2.
+        buck2-version: ["2024-05-15", "latest"]
     steps:
       - uses: actions/checkout@v4
       - name: Install buck
         run: |
           cd $TMPDIR
-          curl -sL -o buck2.zst "https://github.com/facebook/buck2/releases/download/2024-05-15/buck2-x86_64-unknown-linux-gnu.zst"
+          curl -sL -o buck2.zst "https://github.com/facebook/buck2/releases/download/${{ matrix.buck2-version }}/buck2-x86_64-unknown-linux-gnu.zst"
           zstd -d buck2.zst
           chmod +x buck2
           mkdir -p "$HOME/.local/bin"

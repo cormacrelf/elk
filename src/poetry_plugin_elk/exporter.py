@@ -5,6 +5,7 @@ from packaging.utils import NormalizedName
 from poetry.core.packages.dependency_group import MAIN_GROUP
 from poetry.installation.executor import Chooser, Executor
 from poetry.poetry import Poetry
+from poetry.utils.wheel import Wheel
 
 from poetry_plugin_export.walker import get_project_dependency_packages
 
@@ -70,10 +71,11 @@ class Exporter:
                 env = to_env(plat)
                 c = self._executor._chooser
                 chooser = Chooser(c._pool, env, c._config)
-                link = chooser.choose_for(package)
-                target: buck.SourceArchive | buck.WheelDownload
-                built: buck.Target
-                if link.filename.endswith(".whl"):
+                try:
+                    link = chooser.choose_for(package)
+                except:
+                    link = None
+                if link is not None and link.filename.endswith(".whl"):
                     target = buck.WheelDownload(package=package, link=link)
                     BUCK.push(target)
                     built = buck.WheelBuild(
@@ -96,8 +98,15 @@ class Exporter:
                     self._io.write_error_line(f"<error>Available wheels:</error>")
                     for link in chooser._get_links(package):
                         self._io.write_error_line(
-                            "<error>    " + link.filename + "</error>"
+                            "<error>    "
+                            + link.filename
+                            + (" " + str(Wheel(link.filename).tags))
+                            if link.is_wheel
+                            else "" + "</error>"
                         )
+                    self._io.write_error_line(f"<error>Platform tags:</error>")
+                    for tag in env.supported_tags:
+                        self._io.write_error_line("<error>    " + str(tag) + "</error>")
                     return 1
                 platform_actual[plat.name] = built.target_name()
 

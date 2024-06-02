@@ -168,11 +168,10 @@ def walk_dependencies(
 
         requirement.constraint = constraint
 
+        extra_requires = resolve_features_to_requires(locked_package)
+
         for require in locked_package.requires:
-            if require.is_optional() and not any(
-                require in locked_package.extras.get(feature, ())
-                for feature in locked_package.features
-            ):
+            if require.is_optional() and require not in extra_requires:
                 continue
 
             base_marker = require.marker.intersect(requirement.marker).without_extras()
@@ -202,6 +201,34 @@ def walk_dependencies(
             )
 
     return nested_dependencies
+
+
+def resolve_features_to_requires(locked_package: Package) -> set[Dependency]:
+    """
+    Recursively resolve features to extra dependencies
+        [package.extras]
+        adbc = ["adbc-driver-manager", "adbc-driver-sqlite"]
+        all = ["polars[adbc,only_some]"]
+        only_some = ["polars[async,cloudpickle,...]"]
+        ...
+    We need to recursively resolve `polars[all]` to include the adbc feature,
+    and continue resolving `polars[async,cloudpickle]` to include those features
+    and the extra requires they add.
+    """
+    extra_requires: set[Dependency] = set()
+    explore = set(locked_package.features)
+    seen = set()
+    while explore:
+        feature = explore.pop()
+        seen.add(feature)
+        for require in locked_package.extras.get(feature, ()):
+            if require.name == locked_package.name:
+                for feat in require.features:
+                    if feat not in seen:
+                        explore.add(feat)
+            else:
+                extra_requires.add(require)
+    return extra_requires
 
 
 def get_locked_package(

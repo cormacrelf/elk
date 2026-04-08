@@ -8,3 +8,24 @@ elk_packages(
         "linux-x86_64": linux_x86_64_tags,
     },
 )
+
+python_binary(
+    name = "main",
+    main = "main.py",
+    deps = [
+        # keep sorted
+        "//example/uv:colorama",
+        "//example/uv:cowsay",
+        "//example/uv:numpy",
+    ],
+)
+
+python_binary(
+    name = "other",
+    main = "other.py",
+    deps = [
+        # keep sorted
+        "//example/uv:numpy",
+        "//example/uv:polars",
+    ],
+)

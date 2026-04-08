@@ -8,4 +8,8 @@ buck2 run elk//tools:save_tags example/poetry/linux-x86_64.tags.json
 buck2 run elk//tools:save_tags example/uv/linux-x86_64.tags.json
 
 # Check the example builds
-buck2 build //example:main //example:other
+buck2 run //example/poetry:main
+buck2 run //example/poetry:other
+buck2 run //example/uv:main
+buck2 run //example/uv:other
+buck2 run //example/custom_platforms:main

@@ -206,7 +206,7 @@ def _apply_platform(platforms: dict, platform_dict: dict, default: str):
         lambda platform: platform_dict.get(platform, default),
     )
 
-def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], platforms: dict | None = None, visibility: list[str] = ["PUBLIC"]):
+def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], platforms = None, visibility: list[str] = ["PUBLIC"]):
     """Create Buck2 targets for every package in *packages*.
 
     For each package the macro creates:

@@ -1,0 +1,6 @@
+[project]
+name = "custom-platforms"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = ["cowsay>=6.1"]

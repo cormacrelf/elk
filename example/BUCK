@@ -3,9 +3,9 @@ python_binary(
     main = "main.py",
     deps = [
         # keep sorted
-        "//uv:colorama",
-        "//uv:cowsay",
-        "//uv:numpy",
+        "//example/uv:colorama",
+        "//example/uv:cowsay",
+        "//example/uv:numpy",
     ],
 )
 
@@ -14,7 +14,7 @@ python_binary(
     main = "other.py",
     deps = [
         # keep sorted
-        "//uv:numpy",
-        "//uv:polars",
+        "//example/uv:numpy",
+        "//example/uv:polars",
     ],
 )

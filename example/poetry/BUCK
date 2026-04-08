@@ -1,4 +1,4 @@
-load("//:elk.bzl", "elk_packages", "poetry_packages")
+load("@elk//:elk.bzl", "elk_packages", "poetry_packages")
 load(":linux-x86_64.tags.json", linux_x86_64_tags = "value")
 load(":poetry.lock.toml", lock = "value")
 

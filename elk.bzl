@@ -5,8 +5,8 @@ library targets, without any code generation step.
 
 Usage in a BUCK file:
 
-    load("@elk//:elk.bzl", "elk_packages")
-    load("@elk//:elk.bzl", "poetry_packages")  # parse poetry.lock format
+    load("elk//:elk.bzl", "elk_packages")
+    load("elk//:elk.bzl", "poetry_packages")  # parse poetry.lock format
 
     elk_packages(
         packages = poetry_packages(lock),

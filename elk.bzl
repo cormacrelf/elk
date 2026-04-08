@@ -200,13 +200,13 @@ def uv_packages(lock_data: dict) -> list[Package]:
 # Target creation
 # ---------------------------------------------------------------------------
 
-def _apply_platform(platform_dict: dict, default: str):
+def _apply_platform(platforms: dict, platform_dict: dict, default: str):
     return selects.apply(
-        get_reindeer_platforms(),
+        platforms,
         lambda platform: platform_dict.get(platform, default),
     )
 
-def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], visibility: list[str] = ["PUBLIC"]):
+def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], platforms: dict | None = None, visibility: list[str] = ["PUBLIC"]):
     """Create Buck2 targets for every package in *packages*.
 
     For each package the macro creates:
@@ -218,8 +218,12 @@ def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], v
         packages: Use ``poetry_packages()`` or ``uv_packages()`` to build this
                   from a lock file.
         platform_tags: ``{"linux-x86_64": ["cp312-cp312-manylinux...", ...], ...}``
+        platforms: Custom platform select dict. Falls back to
+                   ``get_reindeer_platforms()`` from the prelude.
         visibility: visibility list for the alias targets.
     """
+    if platforms == None:
+        platforms = get_reindeer_platforms()
 
     # sentinel for platforms that don't match any wheel
     native.filegroup(name = "_elk_null", srcs = [])
@@ -274,7 +278,7 @@ def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], v
             actual_map = {}
             for pn, ch in platform_chosen.items():
                 actual_map[pn] = built[ch.file]
-            actual = _apply_platform(actual_map, ":_elk_null")
+            actual = _apply_platform(platforms, actual_map, ":_elk_null")
 
         native.alias(
             name = pkg_name,

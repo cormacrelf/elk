@@ -1,6 +1,6 @@
 from pathlib import Path
 from typing import Iterable
-from cleo.helpers import argument, option
+from cleo.helpers import option
 from poetry.plugins.application_plugin import ApplicationPlugin
 from poetry.console.application import Application
 from poetry.console.commands.installer_command import InstallerCommand
@@ -30,8 +30,11 @@ class CustomCommand(InstallerCommand):
         # self.installer.lock(update=False)
         # self.installer.dry_run(dry_run=True)
         config_path = self.poetry.pyproject_path.parent / Path("elk.toml")
-        config = parse_toml(config_path)
-        output_path = self.poetry.pyproject_path.parent / Path(config.buck.file_name)
+        with open(config_path, "rb") as config_file:
+            config = parse_toml(config_file)
+            output_path = self.poetry.pyproject_path.parent / Path(
+                config.buck.file_name
+            )
 
         locker = self.poetry.locker
         if not locker.is_locked():
@@ -64,39 +67,10 @@ class CustomCommand(InstallerCommand):
         return exporter.with_extras(extras).run(output_path)
 
 
-class SaveTagsCommand(Command):
-    name = "elk-save-tags"
-    description = (
-        "Save packaging tags for the current system to a {name}.tags.json file"
-    )
-
-    arguments = [
-        argument(
-            "name", "Platform name matching a [platform.NAME] section in elk.toml"
-        ),
-    ]
-
-    def handle(self) -> int:
-        import json
-        import platform as platform_mod
-        from packaging.tags import sys_tags
-
-        plat_name = self.argument("name")
-        output_path = Path(f"{plat_name}.tags.json")
-        tag_list = [str(t) for t in sys_tags()]
-
-        with open(output_path, "w") as f:
-            json.dump(tag_list, f, indent=4)
-            f.write("\n")
-
-        self.line(f"<info>Saved {len(tag_list)} tags to {output_path}</info>")
-        return 0
-
-
 class Elk(ApplicationPlugin):
     @property
     def commands(self) -> list[type[Command]]:
-        return [CustomCommand, SaveTagsCommand]
+        return [CustomCommand]
 
     def activate(self, application: Application):
         super().activate(application=application)

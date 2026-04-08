@@ -173,7 +173,7 @@ def uv_packages(lock_data: dict) -> list[Package]:
     for pkg in lock_data["package"]:
         # Skip the root project (virtual source)
         source = pkg.get("source", {})
-        if type(source) == "dict" and source.get("virtual") != None:
+        if type(source) == "dict" and (source.get("virtual") != None or source.get("editable") != None):
             continue
 
         deps = []
@@ -196,6 +196,93 @@ def uv_packages(lock_data: dict) -> list[Package]:
         ))
     return result
 
+def uv_workspace_aliases(lock_data: dict, visibility: list[str] = ["PUBLIC"]):
+    """Create alias targets for uv workspace members in a flat namespace.
+
+    Reads editable packages from uv.lock and for each creates an alias from
+    the normalized name to the member's python_library target, e.g.:
+        :lib-common -> //example/uv_workspace/packages/lib-common:lib-common
+
+    The target path is derived automatically from get_cell_name() and
+    package_name(). Each member's BUCK file must define a python_library
+    with name matching the normalized package name.
+
+    Args:
+        lock_data: Parsed uv.lock TOML data.
+        visibility: Visibility for the alias targets.
+    """
+    members = {}
+    for pkg in lock_data["package"]:
+        source = pkg.get("source", {})
+        if type(source) == "dict" and source.get("editable") != None:
+            members[_normalize(pkg["name"])] = source["editable"]
+    _elk_workspace_aliases(members, visibility)
+
+def create_workspace_member_macro(*, lock_data: dict, root: str):
+    """Return a workspace_member function with lock_data and root curried in.
+
+    Precomputes all workspace members' dependency labels in a single pass over
+    the lock file so each call to the returned function is a pure dict lookup.
+
+    Call this once in a ``.bzl`` file at the workspace root and export the
+    result; each member package then imports and calls the returned function
+    with only ``name`` (and any ``**kwargs`` for ``python_library``).
+
+    Example ``workspace.bzl``::
+
+        load("@elk//:elk.bzl", "create_workspace_member_macro")
+        load(":uv.lock.toml", lock = "value")
+        workspace_member = create_workspace_member_macro(
+            lock_data = lock,
+            root = "//my/workspace",
+        )
+
+    Args:
+        lock_data: Parsed uv.lock TOML data.
+        root: The Buck2 target path of the workspace root BUCK package,
+              e.g. ``"//example/uv_workspace"``.
+    """
+
+    # Single pass: build {normalized_name: [dep_label, ...]} for all packages.
+    all_deps = {}
+    for pkg in lock_data["package"]:
+        all_deps[_normalize(pkg["name"])] = [
+            "{}:{}".format(root, _normalize(dep["name"]))
+            for dep in pkg.get("dependencies", [])
+        ]
+
+    def workspace_member(*, name, **kwargs):
+        _uv_workspace_member(name = name, deps = all_deps, root = root, **kwargs)
+
+    return workspace_member
+
+def _uv_workspace_member(*, name: str, deps: dict, root: str, **kwargs):
+    """Create a python_library for a uv workspace member.
+
+    Follows the uv_build backend's ``src/`` layout convention
+    (https://docs.astral.sh/uv/concepts/build-backend): globs all
+    ``src/**/*.py`` and strips the ``src/`` prefix so modules are
+    importable at their natural paths, including dotted namespace
+    packages configured via ``[tool.uv.build-backend] module-name``.
+
+    Args:
+        name: The package name (will be normalized).
+        deps: Precomputed {normalized_name: [dep_label, ...]} dict from
+              create_workspace_member_macro.
+        root: Unused here but kept for symmetry; deps are already resolved.
+        **kwargs: Passed through to python_library (e.g. visibility).
+    """
+    if name != _normalize(name):
+        fail("name must be normalised so it can be referenced by other packages in the workspace (got '{}', expected '{}')".format(name, _normalize(name)))
+    srcs = {p.removeprefix("src/"): p for p in glob(["src/**/*.py"])}
+    native.python_library(
+        name = name,
+        srcs = srcs,
+        base_module = "",
+        deps = deps.get(name, []),
+        **kwargs
+    )
+
 # ---------------------------------------------------------------------------
 # Target creation
 # ---------------------------------------------------------------------------
@@ -205,6 +292,17 @@ def _apply_platform(platforms: dict, platform_dict: dict, default: str):
         platforms,
         lambda platform: platform_dict.get(platform, default),
     )
+
+def _elk_workspace_aliases(members: dict[str, str], visibility: list[str]):
+    cell = get_cell_name()
+    pkg = package_name()
+    prefix = "{}//{}".format(cell, pkg) if cell else "//{}".format(pkg)
+    for name, path in members.items():
+        native.alias(
+            name = name,
+            actual = "{}/{}:{}".format(prefix, path, name),
+            visibility = visibility,
+        )
 
 def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], platforms = None, visibility: list[str] = ["PUBLIC"]):
     """Create Buck2 targets for every package in *packages*.

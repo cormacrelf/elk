@@ -1,0 +1,12 @@
+load("//example/uv_workspace:workspace.bzl", "workspace_member")
+
+workspace_member(
+    name = "app-cli",
+    visibility = ["PUBLIC"],
+)
+
+python_binary(
+    name = "main",
+    main = "main.py",
+    deps = [":app-cli"],
+)

@@ -1,0 +1,6 @@
+load("//example/uv_workspace:workspace.bzl", "workspace_member")
+
+workspace_member(
+    name = "app-server",
+    visibility = ["PUBLIC"],
+)

@@ -125,6 +125,20 @@ def linux_tags(
 
 
 def load_tags_file(path: Path) -> list[Tag]:
+    if path.suffix == ".json":
+        import json
+
+        with open(path) as f:
+            data = json.load(f)
+        tags = []
+        for entry in data:
+            parts = entry.split("-", 2)
+            if len(parts) != 3:
+                raise ValueError(f"Invalid tag in {path}: {entry!r}")
+            tags.append(Tag(*parts))
+        return tags
+
+    # Legacy plain-text format
     tags = []
     with open(path) as f:
         for line in f:

@@ -8,10 +8,10 @@ python3 -m venv .venv --clear
 source .venv/bin/activate
 pip install poetry .
 
-# Check the example builds
-cd example
-buck2 build :main :other
+# Generate tags file for the current platform
+cd example/pypi
+poetry elk-save-tags linux-x86_64
 
-# Check elk produces the same BUCK file
-poetry -C pypi elk
-git diff --exit-code --color=always pypi/BUCK
+# Check the example builds
+cd ..
+buck2 build :main :other

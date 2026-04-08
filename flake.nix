@@ -26,6 +26,7 @@
             packages = [
               python
               pkgs.poetry
+              pkgs.uv
               pkgs.buck2
               pkgs.ruff
               pkgs.taplo

@@ -19,14 +19,39 @@ load("@prelude//rust:cargo_package.bzl", "get_reindeer_platforms")
 load("@prelude//utils:selects.bzl", "selects")
 
 # ---------------------------------------------------------------------------
+# Record types
+# ---------------------------------------------------------------------------
+
+WheelInfo = record(
+    name = str,
+    version = str,
+    python = str,
+    python_tags = list[str],
+    abi_tags = list[str],
+    platform_tags = list[str],
+)
+
+WheelFile = record(
+    file = str,
+    hash = str,
+    url = field(str | None, None),
+)
+
+Package = record(
+    name = str,
+    version = str,
+    files = list[WheelFile],
+    deps = list[str],
+)
+
+# ---------------------------------------------------------------------------
 # Wheel filename parsing
 # ---------------------------------------------------------------------------
 
-def _parse_wheel_filename(filename):
+def _parse_wheel_filename(filename: str) -> [WheelInfo, None]:
     """Parse a wheel filename into tag components.
 
     Format: {name}-{version}(-{build})?-{python}-{abi}-{platform}.whl
-    Returns struct(name, version, python, abi_tags, platform_tags) or None.
     """
     if not filename.endswith(".whl"):
         return None
@@ -37,7 +62,7 @@ def _parse_wheel_filename(filename):
         name, version, _build, python, abi, plat = parts
     else:
         return None
-    return struct(
+    return WheelInfo(
         name = name,
         version = version,
         python = python,
@@ -46,8 +71,8 @@ def _parse_wheel_filename(filename):
         platform_tags = plat.split("."),
     )
 
-def _wheel_matches_tag(wheel, tag_str):
-    """True if a parsed wheel is compatible with a tag like 'cp312-cp312-manylinux_2_28_x86_64'."""
+def _wheel_matches_tag(wheel: WheelInfo, tag_str: str) -> bool:
+    """True if a parsed wheel is compatible with a tag string."""
     parts = tag_str.split("-", 2)
     if len(parts) != 3:
         return False
@@ -56,21 +81,19 @@ def _wheel_matches_tag(wheel, tag_str):
             abi in wheel.abi_tags and
             plat in wheel.platform_tags)
 
-def _choose_wheel(files, tags):
+def _choose_wheel(files: list[WheelFile], tags: list[str]) -> [WheelFile, None]:
     """Pick the highest-priority wheel for a platform.
 
-    Args:
-        files: list of {"file": "x.whl", "hash": "sha256:..."}
-        tags:  ordered tag strings, best first.
-    Returns: matching file dict, or None.
+    Iterates tags in priority order (best first), returns the first file
+    whose wheel filename matches.
     """
-    wheels = []
+    parsed = []
     for f in files:
-        w = _parse_wheel_filename(f["file"])
+        w = _parse_wheel_filename(f.file)
         if w != None:
-            wheels.append((f, w))
+            parsed.append((f, w))
     for tag in tags:
-        for f, w in wheels:
+        for f, w in parsed:
             if _wheel_matches_tag(w, tag):
                 return f
     return None
@@ -79,7 +102,7 @@ def _choose_wheel(files, tags):
 # URL construction
 # ---------------------------------------------------------------------------
 
-def _pypi_url(filename):
+def _pypi_url(filename: str) -> str:
     """Build a PyPI download URL from a wheel filename.
 
     Uses the redirect-capable path layout:
@@ -96,64 +119,94 @@ def _pypi_url(filename):
         filename,
     )
 
+def _wheel_url(wf: WheelFile) -> str:
+    """Return the download URL for a wheel file, constructing one if needed."""
+    if wf.url != None:
+        return wf.url
+    return _pypi_url(wf.file)
+
 # ---------------------------------------------------------------------------
 # Name helpers
 # ---------------------------------------------------------------------------
 
-def _normalize(name):
+def _normalize(name: str) -> str:
     """PEP 503 normalize a package name (lowercase, collapse [-_.] to -)."""
     return name.lower().replace("_", "-").replace(".", "-")
 
 # ---------------------------------------------------------------------------
 # Lock-file adapters
-#
-# Each adapter turns a lock-file-specific data structure into a uniform list:
-#   [ { "name": "requests", "version": "2.31.0",
-#       "files": [ {"file": "...", "hash": "sha256:..."} ],
-#       "deps": ["urllib3", "certifi"] }, ... ]
 # ---------------------------------------------------------------------------
 
-def poetry_packages(lock_data):
-    """Adapt poetry.lock data (loaded as TOML) into the elk package list.
-
-    Args:
-        lock_data: the full poetry.lock parsed as TOML (a dict with a
-            "package" key containing the array-of-tables).
-
-    Returns:
-        list of package dicts in elk's uniform format.
-    """
+def poetry_packages(lock_data: dict) -> list[Package]:
+    """Adapt poetry.lock data (loaded as TOML) into the elk package list."""
     result = []
     for pkg in lock_data["package"]:
         deps = []
         for dep_name in pkg.get("dependencies", {}).keys():
             deps.append(_normalize(dep_name))
-        result.append({
-            "name": pkg["name"],
-            "version": pkg["version"],
-            "files": pkg.get("files", []),
-            "deps": deps,
-        })
+
+        files = []
+        for f in pkg.get("files", []):
+            files.append(WheelFile(
+                file = f["file"],
+                hash = f["hash"],
+            ))
+
+        result.append(Package(
+            name = pkg["name"],
+            version = pkg["version"],
+            files = files,
+            deps = deps,
+        ))
     return result
 
-def uv_packages(lock_data):
-    """Adapt uv.lock data into the elk package list.
+def _url_filename(url: str) -> str:
+    """Extract the filename from a URL."""
+    return url.rsplit("/", 1)[-1]
 
-    TODO: implement once uv lock format support is added.
+def uv_packages(lock_data: dict) -> list[Package]:
+    """Adapt uv.lock data (loaded as TOML) into the elk package list.
+
+    uv.lock includes full blake2b URLs, which are passed through directly.
     """
-    fail("uv_packages: not yet implemented")
+    result = []
+    for pkg in lock_data["package"]:
+        # Skip the root project (virtual source)
+        source = pkg.get("source", {})
+        if type(source) == "dict" and source.get("virtual") != None:
+            continue
+
+        deps = []
+        for dep in pkg.get("dependencies", []):
+            deps.append(_normalize(dep["name"]))
+
+        files = []
+        for w in pkg.get("wheels", []):
+            files.append(WheelFile(
+                file = _url_filename(w["url"]),
+                hash = w["hash"],
+                url = w["url"],
+            ))
+
+        result.append(Package(
+            name = pkg["name"],
+            version = pkg["version"],
+            files = files,
+            deps = deps,
+        ))
+    return result
 
 # ---------------------------------------------------------------------------
 # Target creation
 # ---------------------------------------------------------------------------
 
-def _apply_platform(platform_dict, default):
+def _apply_platform(platform_dict: dict, default: str):
     return selects.apply(
         get_reindeer_platforms(),
         lambda platform: platform_dict.get(platform, default),
     )
 
-def elk_packages(packages, platform_tags, visibility = ["PUBLIC"]):
+def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], visibility: list[str] = ["PUBLIC"]):
     """Create Buck2 targets for every package in *packages*.
 
     For each package the macro creates:
@@ -162,8 +215,7 @@ def elk_packages(packages, platform_tags, visibility = ["PUBLIC"]):
       - ``alias``  (select the right wheel per-platform)
 
     Args:
-        packages: list of dicts with "name", "version", "files", "deps".
-                  Use ``poetry_packages()`` or ``uv_packages()`` to build this
+        packages: Use ``poetry_packages()`` or ``uv_packages()`` to build this
                   from a lock file.
         platform_tags: ``{"linux-x86_64": ["cp312-cp312-manylinux...", ...], ...}``
         visibility: visibility list for the alias targets.
@@ -172,26 +224,24 @@ def elk_packages(packages, platform_tags, visibility = ["PUBLIC"]):
     # sentinel for platforms that don't match any wheel
     native.filegroup(name = "_elk_null", srcs = [])
 
-    # First pass: build a name -> True set so we know which packages exist
-    # (needed for dependency resolution).
+    # First pass: build a name set for dependency resolution.
     known = {}
     for pkg in packages:
-        known[_normalize(pkg["name"])] = True
+        known[_normalize(pkg.name)] = True
 
     for pkg in packages:
-        pkg_name = _normalize(pkg["name"])
-        files = pkg.get("files", [])
-        pkg_deps = [":{}".format(d) for d in pkg.get("deps", []) if d in known]
+        pkg_name = _normalize(pkg.name)
+        pkg_deps = [":{}".format(d) for d in pkg.deps if d in known]
 
         # --- choose wheels per platform ---
-        platform_chosen = {}  # platform_name -> file dict
-        all_chosen = {}  # filename  -> file dict  (dedup)
+        platform_chosen = {}  # platform_name -> WheelFile
+        all_chosen = {}  # filename -> WheelFile (dedup)
 
         for plat_name, tags in platform_tags.items():
-            chosen = _choose_wheel(files, tags)
+            chosen = _choose_wheel(pkg.files, tags)
             if chosen != None:
                 platform_chosen[plat_name] = chosen
-                all_chosen[chosen["file"]] = chosen
+                all_chosen[chosen.file] = chosen
 
         if len(all_chosen) == 0:
             continue
@@ -199,13 +249,14 @@ def elk_packages(packages, platform_tags, visibility = ["PUBLIC"]):
         # --- create remote_file + prebuilt_python_library ---
         built = {}  # filename -> target label string
         for filename in all_chosen:
-            sha = all_chosen[filename]["hash"]
+            wf = all_chosen[filename]
+            sha = wf.hash
             if sha.startswith("sha256:"):
                 sha = sha[7:]
 
             native.remote_file(
                 name = filename,
-                url = _pypi_url(filename),
+                url = _wheel_url(wf),
                 sha256 = sha,
             )
             bname = filename + "-built"
@@ -218,12 +269,11 @@ def elk_packages(packages, platform_tags, visibility = ["PUBLIC"]):
 
         # --- alias ---
         if len(all_chosen) == 1:
-            # pure-python wheel or only one variant
             actual = built[all_chosen.keys()[0]]
         else:
             actual_map = {}
             for pn, ch in platform_chosen.items():
-                actual_map[pn] = built[ch["file"]]
+                actual_map[pn] = built[ch.file]
             actual = _apply_platform(actual_map, ":_elk_null")
 
         native.alias(

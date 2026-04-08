@@ -77,10 +77,11 @@ def parse_toml(config_path: Path) -> ElkConfig:
             )
         elif platform_name == "linux":
             arch = "aarch64" if config["arch"] == "arm64" else config["arch"]
-            if "tags_file" in config:
+            tags_file = config_dir / f"{name}.tags"
+            if tags_file.exists():
                 platform = LinuxTagsFileConfig(
                     arch=arch,
-                    tags_file=config_dir / config["tags_file"],
+                    tags_file=tags_file,
                 )
             else:
                 platform = LinuxConfig(

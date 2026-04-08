@@ -1,25 +1,15 @@
 load("@prelude//:prelude.bzl", "native")
-load("@prelude//rust:cargo_package.bzl", "DEFAULT_PLATFORM_TEMPLATES")
+load("@prelude//rust:cargo_package.bzl", "get_reindeer_platforms")
 load("@prelude//utils:selects.bzl", "selects")
 
 prelude = native
 
-# This code is based on @prelude//rust:cargo_package.bzl
-# However it's only for a single attribute. Elk's BUCK output is cleaner this way.
-# We can `apply_platform_attrs` for a `platform.prebuilt_python_library` macro
-# if we want extra dependencies on some platforms only.
-def apply_platform_attr(
-        platform_attr,
-        default_value,
-        templates = DEFAULT_PLATFORM_TEMPLATES):
-    chosen = default_value
-
-    for platform, value in platform_attr.items():
-        template = templates.get(platform, None)
-        if template:
-            chosen = selects.apply(template, lambda cond: value if cond else chosen)
-
-    return chosen
+def apply_platform_attr(platform_attr, default_value):
+    """Resolve a {platform_name: value} dict using buck2's select() mechanism."""
+    return selects.apply(
+        get_reindeer_platforms(),
+        lambda platform: platform_attr.get(platform, default_value),
+    )
 
 def _alias(name, **kwargs):
     actual = kwargs.pop("actual", ":null")

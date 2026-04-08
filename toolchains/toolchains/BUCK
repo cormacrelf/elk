@@ -1,0 +1,37 @@
+load("@prelude//tests:test_toolchain.bzl", "noop_test_toolchain")
+load("@prelude//toolchains:cxx.bzl", "system_cxx_toolchain")
+load("@prelude//toolchains:genrule.bzl", "system_genrule_toolchain")
+load("@prelude//toolchains:python.bzl", "remote_python_toolchain")
+
+system_cxx_toolchain(
+    name = "cxx",
+    visibility = ["PUBLIC"],
+)
+
+system_genrule_toolchain(
+    name = "genrule",
+    visibility = ["PUBLIC"],
+)
+
+noop_test_toolchain(
+    name = "test",
+    visibility = ["PUBLIC"],
+)
+
+# Python 3.12 to match cp312 wheels.
+CPYTHON_312 = {
+    "linux": {
+        "arm64": {"sha256": "6662b31424d733bc04082007d43d606e4a07a9099a0436ee6c416341f0c86a3e", "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20250807/cpython-3.12.11+20250807-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"},
+        "x86_64": {"sha256": "0c617ed01b21623ddfeb6e2ffdb2829dbe8c04660da9b88340b5971a9b206860", "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20250807/cpython-3.12.11+20250807-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"},
+    },
+    "macos": {
+        "arm64": {"sha256": "29c0b84947b7a2044fd7e3abec64870ad058ad35c943b7770b7784ec1cee9047", "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20250807/cpython-3.12.11+20250807-aarch64-apple-darwin-install_only_stripped.tar.gz"},
+        "x86_64": {"sha256": "0c456cc89c4f5ec6ec0eccb8f232b879d135e4afa44e7bf5edc9c282059c3657", "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20250807/cpython-3.12.11+20250807-x86_64-apple-darwin-install_only_stripped.tar.gz"},
+    },
+}
+
+remote_python_toolchain(
+    name = "python",
+    visibility = ["PUBLIC"],
+    cpython_urls = CPYTHON_312,
+)

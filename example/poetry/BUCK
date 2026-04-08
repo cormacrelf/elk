@@ -1,0 +1,31 @@
+load("@elk//:elk.bzl", "elk_packages", "poetry_packages")
+load(":linux-x86_64.tags.json", linux_x86_64_tags = "value")
+load(":poetry.lock.toml", lock = "value")
+
+elk_packages(
+    packages = poetry_packages(lock),
+    platform_tags = {
+        "linux-x86_64": linux_x86_64_tags,
+    },
+)
+
+python_binary(
+    name = "main",
+    main = "main.py",
+    deps = [
+        # keep sorted
+        "//example/uv:colorama",
+        "//example/uv:cowsay",
+        "//example/uv:numpy",
+    ],
+)
+
+python_binary(
+    name = "other",
+    main = "other.py",
+    deps = [
+        # keep sorted
+        "//example/uv:numpy",
+        "//example/uv:polars",
+    ],
+)

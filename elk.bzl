@@ -214,11 +214,17 @@ def uv_workspace_aliases(lock_data: dict, visibility: list[str] = ["PUBLIC"]):
     members = {}
     for pkg in lock_data["package"]:
         source = pkg.get("source", {})
-        if type(source) == "dict" and source.get("editable") != None:
-            members[_normalize(pkg["name"])] = source["editable"]
+        if type(source) == "dict":
+            path = source.get("editable")
+            if path != None and path != ".":
+                members[_normalize(pkg["name"])] = path
     _elk_workspace_aliases(members, visibility)
 
-def create_workspace_member_macro(*, lock_data: dict, root: str):
+def _module_name(name: str) -> str:
+    """Derive the Python module name from a package name (hyphens/dots → underscores)."""
+    return name.lower().replace("-", "_").replace(".", "_")
+
+def create_workspace_member_macro(*, lock_data: dict, root: str, src_root: str = "src"):
     """Return a workspace_member function with lock_data and root curried in.
 
     Precomputes all workspace members' dependency labels in a single pass over
@@ -241,6 +247,11 @@ def create_workspace_member_macro(*, lock_data: dict, root: str):
         lock_data: Parsed uv.lock TOML data.
         root: The Buck2 target path of the workspace root BUCK package,
               e.g. ``"//example/uv_workspace"``.
+        src_root: Source root directory. Defaults to ``"src"`` (uv_build / hatchling
+                  src layout). Set to ``""`` for flat layout where module packages
+                  sit directly at the member root; in that case pass ``module`` to
+                  each ``workspace_member`` call when the directory name differs from
+                  the normalised package name.
     """
 
     # Single pass: build {normalized_name: [dep_label, ...]} for all packages.
@@ -252,29 +263,38 @@ def create_workspace_member_macro(*, lock_data: dict, root: str):
         ]
 
     def workspace_member(*, name, **kwargs):
-        _uv_workspace_member(name = name, deps = all_deps, root = root, **kwargs)
+        _uv_workspace_member(name = name, deps = all_deps, root = root, src_root = src_root, **kwargs)
 
     return workspace_member
 
-def _uv_workspace_member(*, name: str, deps: dict, root: str, **kwargs):
+def _uv_workspace_member(*, name: str, deps: dict, root: str, src_root: str, module: str | None = None, **kwargs):
     """Create a python_library for a uv workspace member.
 
-    Follows the uv_build backend's ``src/`` layout convention
-    (https://docs.astral.sh/uv/concepts/build-backend): globs all
-    ``src/**/*.py`` and strips the ``src/`` prefix so modules are
-    importable at their natural paths, including dotted namespace
-    packages configured via ``[tool.uv.build-backend] module-name``.
+    With the default ``src_root = "src"`` (uv_build / hatchling src layout),
+    globs ``src/**/*.py`` and strips the ``src/`` prefix so modules are
+    importable at their natural paths, including dotted namespace packages
+    (https://docs.astral.sh/uv/concepts/build-backend).
+
+    With ``src_root = ""`` (flat layout), globs ``{module}/**/*.py`` from the
+    member root with no prefix stripping. ``module`` defaults to the package
+    name with hyphens/dots replaced by underscores; override it when the module
+    directory name differs from the package name.
 
     Args:
-        name: The package name (will be normalized).
-        deps: Precomputed {normalized_name: [dep_label, ...]} dict from
-              create_workspace_member_macro.
-        root: Unused here but kept for symmetry; deps are already resolved.
+        name: The normalised package name.
+        deps: Precomputed {normalized_name: [dep_label, ...]} from create_workspace_member_macro.
+        root: Unused after dep precomputation; kept for call-site symmetry.
+        src_root: Source root directory (``"src"`` or ``""``).
+        module: Override the module directory name (flat layout only).
         **kwargs: Passed through to python_library (e.g. visibility).
     """
     if name != _normalize(name):
         fail("name must be normalised so it can be referenced by other packages in the workspace (got '{}', expected '{}')".format(name, _normalize(name)))
-    srcs = {p.removeprefix("src/"): p for p in glob(["src/**/*.py"])}
+    if src_root:
+        srcs = {p.removeprefix(src_root + "/"): p for p in glob([src_root + "/**/*.py"])}
+    else:
+        mod = module if module != None else _module_name(name)
+        srcs = glob([mod + "/**/*.py"])
     native.python_library(
         name = name,
         srcs = srcs,

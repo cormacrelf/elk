@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Iterable, NamedTuple
 from packaging.tags import MacVersion, PythonVersion
 
@@ -19,6 +20,11 @@ class LinuxConfig(NamedTuple):
     manylinux2014_compatible: bool
 
 
+class LinuxTagsFileConfig(NamedTuple):
+    arch: str
+    tags_file: Path
+
+
 class DarwinConfig(NamedTuple):
     macos_version: MacVersion
     arch: str
@@ -28,7 +34,7 @@ class DarwinConfig(NamedTuple):
 class Platform(NamedTuple):
     name: str
     python: PythonConfig
-    platform: DarwinConfig | LinuxConfig
+    platform: DarwinConfig | LinuxConfig | LinuxTagsFileConfig
 
 
 class BuckConfig(NamedTuple):
@@ -47,8 +53,10 @@ class ElkConfig(NamedTuple):
     buck: BuckConfig
 
 
-def parse_toml(file) -> ElkConfig:
-    data = tomllib.load(file)
+def parse_toml(config_path: Path) -> ElkConfig:
+    config_dir = config_path.parent
+    with open(config_path, "rb") as f:
+        data = tomllib.load(f)
     platforms = []
 
     buck = BuckConfig(**data.get("buck", {}))
@@ -69,14 +77,24 @@ def parse_toml(file) -> ElkConfig:
             )
         elif platform_name == "linux":
             arch = "aarch64" if config["arch"] == "arm64" else config["arch"]
-            platform = LinuxConfig(
-                arch=arch,
-                abis=config["abi"],
-                glibc_version=tuple(list(config["glibc_version"])[0:2]),
-                manylinux1_compatible=config.get("manylib1_compatible", False),
-                manylinux2010_compatible=config.get("manylib2010_compatible", False),
-                manylinux2014_compatible=config.get("manylib2014_compatible", False),
-            )
+            if "tags_file" in config:
+                platform = LinuxTagsFileConfig(
+                    arch=arch,
+                    tags_file=config_dir / config["tags_file"],
+                )
+            else:
+                platform = LinuxConfig(
+                    arch=arch,
+                    abis=config["abi"],
+                    glibc_version=tuple(list(config["glibc_version"])[0:2]),
+                    manylinux1_compatible=config.get("manylib1_compatible", False),
+                    manylinux2010_compatible=config.get(
+                        "manylib2010_compatible", False
+                    ),
+                    manylinux2014_compatible=config.get(
+                        "manylib2014_compatible", False
+                    ),
+                )
         else:
             raise ValueError(f"Unsupported platform: {platform_name}")
 

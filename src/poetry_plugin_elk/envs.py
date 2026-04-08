@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Iterable, Iterator
 from packaging.tags import (
     Tag,
@@ -8,7 +9,13 @@ from packaging.tags import (
 )
 from poetry.utils.env import MockEnv
 
-from poetry_plugin_elk.config import PythonConfig, DarwinConfig, LinuxConfig, Platform
+from poetry_plugin_elk.config import (
+    PythonConfig,
+    DarwinConfig,
+    LinuxConfig,
+    LinuxTagsFileConfig,
+    Platform,
+)
 
 
 def tags(
@@ -117,6 +124,20 @@ def linux_tags(
     return tags(f, linux.abis, platforms)
 
 
+def load_tags_file(path: Path) -> list[Tag]:
+    tags = []
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split("-", 2)
+            if len(parts) != 3:
+                raise ValueError(f"Invalid tag in {path}: {line!r}")
+            tags.append(Tag(*parts))
+    return tags
+
+
 def to_env(plat: Platform) -> MockEnv:
     if type(plat.platform) is DarwinConfig:
         return MockEnv(
@@ -130,8 +151,16 @@ def to_env(plat: Platform) -> MockEnv:
             platform_machine=plat.platform.arch,
             supported_tags=list(linux_tags(plat.python, plat.platform)),
         )
+    elif type(plat.platform) is LinuxTagsFileConfig:
+        return MockEnv(
+            platform="linux",
+            platform_machine=plat.platform.arch,
+            supported_tags=load_tags_file(plat.platform.tags_file),
+        )
     else:
-        raise Exception("plat.platform was neither LinuxConfig nor DarwinConfig")
+        raise Exception(
+            "plat.platform was not DarwinConfig, LinuxConfig, or LinuxTagsFileConfig"
+        )
 
 
 _fixed = PythonConfig(

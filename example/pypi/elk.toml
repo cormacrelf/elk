@@ -27,6 +27,16 @@ cpython = true
 #
 # As for the attributes, they are used to generate long lists of compatible tags.
 # The first matching wheel is used for each platform.
+#
+# For Linux platforms, you can either specify glibc/manylinux parameters manually
+# (as shown below), or place a tags file next to this config file named
+# "{platform-name}.tags" (e.g. "linux-x86_64.tags"). If the file exists, elk
+# uses the real tags from it instead of computing them from glibc/manylinux params.
+#
+# Generate the tags file by running on the target machine:
+#   poetry elk-save-tags linux-x86_64
+# Or without elk installed:
+#   python3 -c "from packaging.tags import sys_tags; [print(t) for t in sys_tags()]" > linux-x86_64.tags
 
 [platform.linux-x86_64]
 platform = "linux"

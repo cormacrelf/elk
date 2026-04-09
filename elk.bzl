@@ -252,7 +252,12 @@ def _module_name(name: str) -> str:
     """Derive the Python module name from a package name (hyphens/dots → underscores)."""
     return name.lower().replace("-", "_").replace(".", "_")
 
-def create_workspace_member_macro(*, lock_data: dict, root: str, src_root: str = "src"):
+def create_workspace_member_macro(
+        *,
+        lock_data: dict,
+        root: str,
+        src_root: str = "src",
+        version: str | None = None):
     """Return a workspace_member function with lock_data and root curried in.
 
     Precomputes all workspace members' dependency labels in a single pass over
@@ -269,6 +274,7 @@ def create_workspace_member_macro(*, lock_data: dict, root: str, src_root: str =
         workspace_member = create_workspace_member_macro(
             lock_data = lock,
             root = "//my/workspace",
+            version = "0.1.0",
         )
 
     Args:
@@ -280,6 +286,10 @@ def create_workspace_member_macro(*, lock_data: dict, root: str, src_root: str =
                   sit directly at the member root; in that case pass ``module`` to
                   each ``workspace_member`` call when the directory name differs from
                   the normalised package name.
+        version: Workspace-wide fallback version for dist-info generation. Used when
+                 a member's ``pyproject`` data is not provided or does not contain a
+                 static version. Set this to make ``importlib.metadata.version()``
+                 work at runtime for all members without per-member pyproject loading.
     """
 
     # Single pass: build {normalized_name: [dep_label, ...]} for all packages.
@@ -292,7 +302,7 @@ def create_workspace_member_macro(*, lock_data: dict, root: str, src_root: str =
         ]
 
     def workspace_member(*, name, **kwargs):
-        _uv_workspace_member(name = name, deps = all_deps, root = root, src_root = src_root, **kwargs)
+        _uv_workspace_member(name = name, deps = all_deps, root = root, src_root = src_root, version = version, **kwargs)
 
     return workspace_member
 
@@ -328,7 +338,7 @@ def uv_root_python_library(
         **kwargs
     )
 
-def _uv_workspace_member(*, name: str, deps: dict, root: str, src_root: str, module: str | None = None, **kwargs):
+def _uv_workspace_member(*, name: str, deps: dict, root: str, src_root: str, version: str | None = None, module: str | None = None, pyproject: dict | None = None, **kwargs):
     """Create a python_library for a uv workspace member.
 
     With the default ``src_root = "src"`` (uv_build / hatchling src layout),
@@ -341,12 +351,20 @@ def _uv_workspace_member(*, name: str, deps: dict, root: str, src_root: str, mod
     name with hyphens/dots replaced by underscores; override it when the module
     directory name differs from the package name.
 
+    A minimal ``*.dist-info/METADATA`` is generated so that
+    ``importlib.metadata.version()`` works at runtime. The version is resolved
+    in priority order: per-member ``pyproject`` static version > workspace-wide
+    ``version`` fallback. If neither is available, no dist-info is created.
+
     Args:
         name: The normalised package name.
         deps: Precomputed {normalized_name: [dep_label, ...]} from create_workspace_member_macro.
         root: Unused after dep precomputation; kept for call-site symmetry.
         src_root: Source root directory (``"src"`` or ``""``).
+        version: Workspace-wide fallback version (from ``create_workspace_member_macro``).
         module: Override the module directory name (flat layout only).
+        pyproject: Parsed ``pyproject.toml`` data. Its ``[project].version`` takes
+                   priority over the workspace-wide ``version``.
         **kwargs: Passed through to python_library (e.g. visibility).
     """
     if name != _normalize(name):
@@ -355,7 +373,28 @@ def _uv_workspace_member(*, name: str, deps: dict, root: str, src_root: str, mod
         srcs = {p.removeprefix(src_root + "/"): p for p in glob([src_root + "/**/*.py"])}
     else:
         mod = module if module != None else _module_name(name)
-        srcs = glob([mod + "/**/*.py"])
+        srcs = {p: p for p in glob([mod + "/**/*.py"])}
+
+    # Resolve version: pyproject static version > workspace-wide fallback.
+    effective_version = None
+    if pyproject != None:
+        v = pyproject.get("project", {}).get("version")
+        if v != None and type(v) == "string":
+            effective_version = v
+    if effective_version == None and version != None:
+        effective_version = version
+
+    # Generate dist-info/METADATA so importlib.metadata.version() works.
+    if effective_version != None:
+        dist_name = _module_name(name)
+        metadata_target = name + "-dist-info-metadata"
+        native.genrule(
+            name = metadata_target,
+            out = "METADATA",
+            cmd = "printf 'Metadata-Version: 2.1\\nName: {}\\nVersion: {}\\n' > $OUT".format(name, effective_version),
+        )
+        srcs["{}-{}.dist-info/METADATA".format(dist_name, effective_version)] = ":" + metadata_target
+
     native.python_library(
         name = name,
         srcs = srcs,

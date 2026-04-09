@@ -306,37 +306,25 @@ def create_workspace_member_macro(
 
     return workspace_member
 
-def uv_root_python_library(
-        *,
-        lock_data: dict,
-        name: str,
-        src_root: str = "src",
-        module: str | None = None,
-        **kwargs):
-    """Create a python_library for a non-workspace uv project (the root package).
+def uv_deps(lock_data: dict, name: str) -> list[str]:
+    """Return the resolved dependency labels for a package in the lock file.
 
-    Use this in the BUCK file that sits alongside ``uv.lock`` for a single-package
-    (non-workspace) project. It reads deps from the lock so you don't have to
-    list them manually.
-
-    For uv workspaces, use ``create_workspace_member_macro`` in a ``workspace.bzl``
-    and import the returned function in each member's BUCK file instead.
+    Looks up the package by normalised name and returns a list of target labels
+    (e.g. ``[":numpy", ":colorama", ...]``) suitable for passing to
+    ``python_library`` or ``python_binary`` ``deps``.
 
     Args:
         lock_data: Parsed uv.lock TOML data.
-        name: Normalised package name (must equal ``_normalize(name)``).
-        src_root: Source root directory (``"src"`` or ``""``).
-        module: Override the module directory name.
-        **kwargs: Forwarded to ``python_library`` (e.g. ``visibility``).
+        name: Normalised package name to look up.
     """
-    cell = get_cell_name()
-    pkg = package_name()
-    root = "{}//{}".format(cell, pkg) if cell else "//{}".format(pkg)
-    create_workspace_member_macro(lock_data = lock_data, root = root, src_root = src_root)(
-        name = name,
-        module = module,
-        **kwargs
-    )
+    multi_version = _multi_version_set(lock_data)
+    for pkg in lock_data["package"]:
+        if _normalize(pkg["name"]) == _normalize(name):
+            return [
+                ":{}".format(_versioned_dep_name(dep, multi_version))
+                for dep in pkg.get("dependencies", [])
+            ]
+    return []
 
 def _uv_workspace_member(*, name: str, deps: dict, root: str, src_root: str, version: str | None = None, module: str | None = None, pyproject: dict | None = None, **kwargs):
     """Create a python_library for a uv workspace member.

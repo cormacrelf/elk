@@ -66,7 +66,7 @@ From scratch: `uv init`. You may have to be careful about uv overwriting your
 3. Write a BUCK file that loads everything directly:
 
    ```python
-   load("@elk//:elk.bzl", "elk_packages", "uv_packages")
+   load("@elk//:elk.bzl", "elk_packages", "uv_deps", "uv_packages")
    load(":linux-x86_64.tags.json", linux_x86_64_tags = "value")
    load(":uv.lock.toml", lock = "value")
 
@@ -80,7 +80,8 @@ From scratch: `uv init`. You may have to be careful about uv overwriting your
    python_binary(
        name = "main",
        main = "main.py",
-       deps = [":requests"], # or whatever
+       # automatically read deps of the root package from uv.lock
+       deps = uv_deps(lock, "my-project"),
    )
    ```
 

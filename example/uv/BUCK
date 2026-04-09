@@ -1,4 +1,4 @@
-load("@elk//:elk.bzl", "elk_packages", "uv_packages")
+load("@elk//:elk.bzl", "elk_packages", "uv_deps", "uv_packages")
 load(":linux-x86_64.tags.json", linux_x86_64_tags = "value")
 load(":uv.lock.toml", lock = "value")
 
@@ -12,20 +12,16 @@ elk_packages(
 python_binary(
     name = "main",
     main = "main.py",
-    deps = [
-        # keep sorted
-        "//example/uv:colorama",
-        "//example/uv:cowsay",
-        "//example/uv:numpy",
-    ],
+    # automatically read in the deps of the root package ('example') from uv.lock
+    deps = uv_deps(lock, "example"),
 )
 
+# You don't need uv_deps — you can just reference the package aliases directly:
 python_binary(
     name = "other",
     main = "other.py",
     deps = [
-        # keep sorted
-        "//example/uv:numpy",
-        "//example/uv:polars",
+        ":numpy",
+        ":polars",
     ],
 )

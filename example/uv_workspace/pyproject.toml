@@ -1,0 +1,14 @@
+[project]
+name = "workspace-root"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["lib-common", "lib-uncommon", "app-server", "app-cli"]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+lib-common = { workspace = true }
+lib-uncommon = { workspace = true }
+app-server = { workspace = true }
+app-cli = { workspace = true }

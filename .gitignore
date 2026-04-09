@@ -3,3 +3,4 @@ __pycache__
 buck-out
 # external cell
 prelude
+.direnv

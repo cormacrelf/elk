@@ -164,21 +164,45 @@ def _url_filename(url: str) -> str:
     """Extract the filename from a URL."""
     return url.rsplit("/", 1)[-1]
 
+def _multi_version_set(lock_data: dict) -> dict:
+    """Return {normalized_name: True} for packages that appear with multiple versions."""
+    counts = {}
+    for pkg in lock_data["package"]:
+        source = pkg.get("source", {})
+        if type(source) == "dict" and (source.get("virtual") != None or source.get("editable") != None):
+            continue
+        n = _normalize(pkg["name"])
+        counts[n] = counts.get(n, 0) + 1
+    return {n: True for n, c in counts.items() if c > 1}
+
+def _versioned_dep_name(dep: dict, multi_version: dict) -> str:
+    """Return the target name for a dep entry, versioned when the dep has multiple versions."""
+    name = _normalize(dep["name"])
+    version = dep.get("version")
+    if version != None and multi_version.get(name):
+        return "{}-{}".format(name, version)
+    return name
+
 def uv_packages(lock_data: dict) -> list[Package]:
     """Adapt uv.lock data (loaded as TOML) into the elk package list.
 
     uv.lock includes full blake2b URLs, which are passed through directly.
+
+    When the lock file contains multiple versions of the same package (e.g. for
+    different Python version markers), each version gets its own targets named
+    ``{name}-{version}`` instead of the plain ``{name}``. Dep references use the
+    same versioned names so the graph remains consistent.
     """
+    multi_version = _multi_version_set(lock_data)
+
     result = []
     for pkg in lock_data["package"]:
-        # Skip the root project (virtual source)
+        # Skip the root project (virtual source) and workspace members (editable)
         source = pkg.get("source", {})
         if type(source) == "dict" and (source.get("virtual") != None or source.get("editable") != None):
             continue
 
-        deps = []
-        for dep in pkg.get("dependencies", []):
-            deps.append(_normalize(dep["name"]))
+        deps = [_versioned_dep_name(dep, multi_version) for dep in pkg.get("dependencies", [])]
 
         files = []
         for w in pkg.get("wheels", []):
@@ -199,13 +223,17 @@ def uv_packages(lock_data: dict) -> list[Package]:
 def uv_workspace_aliases(lock_data: dict, visibility: list[str] = ["PUBLIC"]):
     """Create alias targets for uv workspace members in a flat namespace.
 
-    Reads editable packages from uv.lock and for each creates an alias from
-    the normalized name to the member's python_library target, e.g.:
+    Reads editable packages from uv.lock (skipping ``editable = "."``) and for
+    each creates an alias from the normalised name to the member's
+    python_library target, e.g.:
         :lib-common -> //example/uv_workspace/packages/lib-common:lib-common
+
+    The root editable package (``source = { editable = "." }``) is not handled
+    here; register it explicitly with ``uv_workspace_member`` if needed.
 
     The target path is derived automatically from get_cell_name() and
     package_name(). Each member's BUCK file must define a python_library
-    with name matching the normalized package name.
+    with name matching the normalised package name.
 
     Args:
         lock_data: Parsed uv.lock TOML data.
@@ -255,10 +283,11 @@ def create_workspace_member_macro(*, lock_data: dict, root: str, src_root: str =
     """
 
     # Single pass: build {normalized_name: [dep_label, ...]} for all packages.
+    multi_version = _multi_version_set(lock_data)
     all_deps = {}
     for pkg in lock_data["package"]:
         all_deps[_normalize(pkg["name"])] = [
-            "{}:{}".format(root, _normalize(dep["name"]))
+            "{}:{}".format(root, _versioned_dep_name(dep, multi_version))
             for dep in pkg.get("dependencies", [])
         ]
 
@@ -266,6 +295,38 @@ def create_workspace_member_macro(*, lock_data: dict, root: str, src_root: str =
         _uv_workspace_member(name = name, deps = all_deps, root = root, src_root = src_root, **kwargs)
 
     return workspace_member
+
+def uv_root_python_library(
+        *,
+        lock_data: dict,
+        name: str,
+        src_root: str = "src",
+        module: str | None = None,
+        **kwargs):
+    """Create a python_library for a non-workspace uv project (the root package).
+
+    Use this in the BUCK file that sits alongside ``uv.lock`` for a single-package
+    (non-workspace) project. It reads deps from the lock so you don't have to
+    list them manually.
+
+    For uv workspaces, use ``create_workspace_member_macro`` in a ``workspace.bzl``
+    and import the returned function in each member's BUCK file instead.
+
+    Args:
+        lock_data: Parsed uv.lock TOML data.
+        name: Normalised package name (must equal ``_normalize(name)``).
+        src_root: Source root directory (``"src"`` or ``""``).
+        module: Override the module directory name.
+        **kwargs: Forwarded to ``python_library`` (e.g. ``visibility``).
+    """
+    cell = get_cell_name()
+    pkg = package_name()
+    root = "{}//{}".format(cell, pkg) if cell else "//{}".format(pkg)
+    create_workspace_member_macro(lock_data = lock_data, root = root, src_root = src_root)(
+        name = name,
+        module = module,
+        **kwargs
+    )
 
 def _uv_workspace_member(*, name: str, deps: dict, root: str, src_root: str, module: str | None = None, **kwargs):
     """Create a python_library for a uv workspace member.
@@ -316,11 +377,22 @@ def _apply_platform(platforms: dict, platform_dict: dict, default: str):
 def _elk_workspace_aliases(members: dict[str, str], visibility: list[str]):
     cell = get_cell_name()
     pkg = package_name()
-    prefix = "{}//{}".format(cell, pkg) if cell else "//{}".format(pkg)
+
+    # Build a function to construct the full target label for a member path.
+    # When the BUCK file is at the cell root (pkg == ""), the label is
+    # "cell//path:name"; when it is nested, it is "cell//pkg/path:name".
+    if pkg:
+        def _actual(path, name):
+            base = "{}//{}".format(cell, pkg) if cell else "//{}".format(pkg)
+            return "{}/{}:{}".format(base, path, name)
+    else:
+        def _actual(path, name):
+            base = "{}//".format(cell) if cell else "//"
+            return "{}{}:{}".format(base, path, name)
     for name, path in members.items():
         native.alias(
             name = name,
-            actual = "{}/{}:{}".format(prefix, path, name),
+            actual = _actual(path, name),
             visibility = visibility,
         )
 
@@ -346,13 +418,32 @@ def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], p
     # sentinel for platforms that don't match any wheel
     native.filegroup(name = "_elk_null", srcs = [])
 
-    # First pass: build a name set for dependency resolution.
+    # Detect packages that appear with multiple versions so we can use
+    # versioned alias names (e.g. :huggingface-hub-1.3.4) and avoid conflicts.
+    version_counts = {}
+    for pkg in packages:
+        n = _normalize(pkg.name)
+        version_counts[n] = version_counts.get(n, 0) + 1
+    multi_version = {n: True for n, c in version_counts.items() if c > 1}
+
+    def _alias_name(pkg):
+        n = _normalize(pkg.name)
+        if multi_version.get(n):
+            return "{}-{}".format(n, pkg.version)
+        return n
+
+    # Build known set: only packages that have a matching wheel for at least one
+    # configured platform. Packages with no matching wheels (sdist-only, or
+    # platform-exclusive packages like pywin32) are excluded so that deps on
+    # them are silently dropped rather than referencing non-existent targets.
     known = {}
     for pkg in packages:
-        known[_normalize(pkg.name)] = True
+        for tags in platform_tags.values():
+            if _choose_wheel(pkg.files, tags) != None:
+                known[_alias_name(pkg)] = True
+                break
 
     for pkg in packages:
-        pkg_name = _normalize(pkg.name)
         pkg_deps = [":{}".format(d) for d in pkg.deps if d in known]
 
         # --- choose wheels per platform ---
@@ -399,7 +490,7 @@ def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], p
             actual = _apply_platform(platforms, actual_map, ":_elk_null")
 
         native.alias(
-            name = pkg_name,
+            name = _alias_name(pkg),
             actual = actual,
             visibility = visibility,
         )

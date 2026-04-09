@@ -54,16 +54,29 @@ entry for the elk cell:
 From scratch: `uv init`. You may have to be careful about uv overwriting your
 .gitignore file, make sure buck-out is still in there afterwards. Then:
 
-1. Lock your dependencies and create the symlink Buck2 needs to load TOML:
+1. Your `pyproject.toml` should have a project name and dependencies:
+
+   ```toml
+   [project]
+   name = "root-package-name"
+   version = "0.1.0"
+   requires-python = ">=3.12"
+   dependencies = [
+     "numpy>=2.0",
+     "cowsay>=6.1",
+   ]
+   ```
+
+2. Lock your dependencies and create the symlink Buck2 needs to load TOML:
 
        uv lock
        ln -s uv.lock uv.lock.toml
 
-2. Generate a platform tags file (once per target platform):
+3. Generate a platform tags file (once per target platform):
 
        buck2 run elk//tools:save_tags -- linux-x86_64.tags.json
 
-3. Write a BUCK file that loads everything directly:
+4. Write a BUCK file that loads everything directly:
 
    ```python
    load("@elk//:elk.bzl", "elk_packages", "uv_deps", "uv_packages")
@@ -81,11 +94,11 @@ From scratch: `uv init`. You may have to be careful about uv overwriting your
        name = "main",
        main = "main.py",
        # automatically read deps of the root package from uv.lock
-       deps = uv_deps(lock, "my-project"),
+       deps = uv_deps(lock, "root-package-name"),
    )
    ```
 
-4. Build and run:
+5. Build and run:
 
        buck2 run :main
 

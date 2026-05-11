@@ -395,7 +395,8 @@ def _uv_workspace_member(*, name: str, deps: dict, root: str, src_root: str, ver
 # Target creation
 # ---------------------------------------------------------------------------
 
-def _apply_platform(platforms: dict, platform_dict: dict, default: str):
+def _apply_platform(platforms, platform_dict: dict, default: str):
+    # no idea how to annotate platforms as possibly being a select
     return selects.apply(
         platforms,
         lambda platform: platform_dict.get(platform, default),

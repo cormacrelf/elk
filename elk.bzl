@@ -424,7 +424,7 @@ def _elk_workspace_aliases(members: dict[str, str], visibility: list[str]):
             visibility = visibility,
         )
 
-def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], platforms = None, visibility: list[str] = ["PUBLIC"]):
+def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], platforms = None, visibility: list[str] = ["PUBLIC"], downloader = native.http_file):
     """Create Buck2 targets for every package in *packages*.
 
     For each package the macro creates:
@@ -439,6 +439,7 @@ def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], p
         platforms: Custom platform select dict. Falls back to
                    ``get_reindeer_platforms()`` from the prelude.
         visibility: visibility list for the alias targets.
+        downloader: http_file compatible downloading rule.
     """
     if platforms == None:
         platforms = get_reindeer_platforms()
@@ -495,9 +496,9 @@ def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], p
             if sha.startswith("sha256:"):
                 sha = sha[7:]
 
-            native.remote_file(
+            downloader(
                 name = filename,
-                url = _wheel_url(wf),
+                urls = [_wheel_url(wf)],
                 sha256 = sha,
             )
             bname = filename + "-built"

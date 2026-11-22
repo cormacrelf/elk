@@ -160,9 +160,44 @@ def poetry_packages(lock_data: dict) -> list[Package]:
         ))
     return result
 
+_HEX_DIGITS = "0123456789abcdefABCDEF"
+
+# Characters a wheel filename can contain: names and tags are `[A-Za-z0-9._]`,
+# versions add `+` (local) and `!` (epoch), and `-` separates the parts. All of
+# them are valid in a target name.
+_WHEEL_FILENAME_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-+!"
+
+def _percent_decode(s: str) -> str:
+    """Decode `%XX` escapes, e.g. the `%2B` in PyTorch's `torch-2.11.0%2Bcpu-...whl`.
+
+    Only escapes of characters that can appear in a wheel filename are accepted.
+    Anything else, like `%2F` (`/`) or `%25` (`%`), would decode into an invalid
+    target name, and decoding a UTF-8 byte sequence one byte per character would
+    silently produce garbage.
+    """
+    chunks = s.split("%")
+    decoded = [chunks[0]]
+    for chunk in chunks[1:]:
+        escape = chunk[:2]
+        if len(escape) != 2 or escape[0] not in _HEX_DIGITS or escape[1] not in _HEX_DIGITS:
+            fail("Malformed percent escape `%{}` in `{}`".format(escape, s))
+        byte = int(escape, 16)
+        if byte >= 0x80:
+            fail("Non-ASCII percent escape `%{}` in `{}`".format(escape, s))
+        char = chr(byte)
+        if char not in _WHEEL_FILENAME_CHARS:
+            fail("Percent escape `%{}` in `{}` decodes to {}, which cannot appear in a wheel filename".format(escape, s, repr(char)))
+        decoded.append(char + chunk[2:])
+    return "".join(decoded)
+
 def _url_filename(url: str) -> str:
-    """Extract the filename from a URL."""
-    return url.rsplit("/", 1)[-1]
+    """Extract the filename from a URL, decoded: a target name cannot contain `%`.
+
+    Drops any query string or fragment first, e.g. the signature on a
+    pre-signed S3 URL, which would otherwise hide the `.whl` suffix.
+    """
+    path = url.split("#", 1)[0].split("?", 1)[0]
+    return _percent_decode(path.rsplit("/", 1)[-1])
 
 def _multi_version_set(lock_data: dict) -> dict:
     """Return {normalized_name: True} for packages that appear with multiple versions."""

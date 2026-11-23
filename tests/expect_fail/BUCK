@@ -1,0 +1,7 @@
+# Expected-failure tests. Without config this only lists the cases as targets;
+# with `-c elk_tests.expect_fail=<case>` it runs that case. See tests/run.sh.
+
+load(":cases.bzl", "CASES")
+load(":runner.bzl", "expect_fail_package")
+
+expect_fail_package(CASES)

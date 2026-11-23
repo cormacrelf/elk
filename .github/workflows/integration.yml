@@ -5,14 +5,11 @@ on:
     branches: ["master", "test-ci"]
   pull_request:
     branches: ["master"]
-  schedule:
-    # roughly the day after each new buck2 release tag, which is on the 1st and 15th or so.
-    - cron: "19 23 2,16 * *"
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: DeterminateSystems/nix-installer-action@main
       - run: nix develop --command bash test.sh

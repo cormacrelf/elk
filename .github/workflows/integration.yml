@@ -5,9 +5,6 @@ on:
     branches: ["master", "test-ci"]
   pull_request:
     branches: ["master"]
-  schedule:
-    # roughly the day after each new buck2 release tag, which is on the 1st and 15th or so.
-    - cron: "19 23 2,16 * *"
 
 jobs:
   test:

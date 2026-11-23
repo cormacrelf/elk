@@ -18,120 +18,24 @@ load("@prelude//:prelude.bzl", "native")
 load("@prelude//rust:cargo_package.bzl", "get_reindeer_platforms")
 load("@prelude//utils:selects.bzl", "selects")
 
-# ---------------------------------------------------------------------------
-# Record types
-# ---------------------------------------------------------------------------
-
-WheelInfo = record(
-    name = str,
-    version = str,
-    python = str,
-    python_tags = list[str],
-    abi_tags = list[str],
-    platform_tags = list[str],
+# Helpers live in private/ so they can be loaded by //tests; nothing outside
+# elk should load them. Loaded names are not re-exported.
+load(
+    "//private:helpers.bzl",
+    "Package",
+    "WheelFile",
+    "choose_wheel",
+    "module_name",
+    "multi_version_set",
+    "normalize",
+    "url_filename",
+    "versioned_dep_name",
+    "wheel_url",
 )
 
-WheelFile = record(
-    file = str,
-    hash = str,
-    url = field(str | None, None),
-)
-
-Package = record(
-    name = str,
-    version = str,
-    files = list[WheelFile],
-    deps = list[str],
-)
-
-# ---------------------------------------------------------------------------
-# Wheel filename parsing
-# ---------------------------------------------------------------------------
-
-def _parse_wheel_filename(filename: str) -> [WheelInfo, None]:
-    """Parse a wheel filename into tag components.
-
-    Format: {name}-{version}(-{build})?-{python}-{abi}-{platform}.whl
-    """
-    if not filename.endswith(".whl"):
-        return None
-    parts = filename[:-4].split("-")
-    if len(parts) == 5:
-        name, version, python, abi, plat = parts
-    elif len(parts) == 6:
-        name, version, _build, python, abi, plat = parts
-    else:
-        return None
-    return WheelInfo(
-        name = name,
-        version = version,
-        python = python,
-        python_tags = python.split("."),
-        abi_tags = abi.split("."),
-        platform_tags = plat.split("."),
-    )
-
-def _wheel_matches_tag(wheel: WheelInfo, tag_str: str) -> bool:
-    """True if a parsed wheel is compatible with a tag string."""
-    parts = tag_str.split("-", 2)
-    if len(parts) != 3:
-        return False
-    interp, abi, plat = parts
-    return (interp in wheel.python_tags and
-            abi in wheel.abi_tags and
-            plat in wheel.platform_tags)
-
-def _choose_wheel(files: list[WheelFile], tags: list[str]) -> [WheelFile, None]:
-    """Pick the highest-priority wheel for a platform.
-
-    Iterates tags in priority order (best first), returns the first file
-    whose wheel filename matches.
-    """
-    parsed = []
-    for f in files:
-        w = _parse_wheel_filename(f.file)
-        if w != None:
-            parsed.append((f, w))
-    for tag in tags:
-        for f, w in parsed:
-            if _wheel_matches_tag(w, tag):
-                return f
-    return None
-
-# ---------------------------------------------------------------------------
-# URL construction
-# ---------------------------------------------------------------------------
-
-def _pypi_url(filename: str) -> str:
-    """Build a PyPI download URL from a wheel filename.
-
-    Uses the redirect-capable path layout:
-      https://files.pythonhosted.org/packages/{python}/{initial}/{name}/{filename}
-    which 302-redirects to the canonical blake2b-hashed path.
-    """
-    w = _parse_wheel_filename(filename)
-    if w == None:
-        fail("Not a wheel: " + filename)
-    return "https://files.pythonhosted.org/packages/{}/{}/{}/{}".format(
-        w.python,
-        w.name[0],
-        w.name,
-        filename,
-    )
-
-def _wheel_url(wf: WheelFile) -> str:
-    """Return the download URL for a wheel file, constructing one if needed."""
-    if wf.url != None:
-        return wf.url
-    return _pypi_url(wf.file)
-
-# ---------------------------------------------------------------------------
-# Name helpers
-# ---------------------------------------------------------------------------
-
-def _normalize(name: str) -> str:
-    """PEP 503 normalize a package name (lowercase, collapse [-_.] to -)."""
-    return name.lower().replace("_", "-").replace(".", "-")
+# Re-export the public record types: loaded names are private until reassigned.
+Package = Package
+WheelFile = WheelFile
 
 # ---------------------------------------------------------------------------
 # Lock-file adapters
@@ -143,7 +47,7 @@ def poetry_packages(lock_data: dict) -> list[Package]:
     for pkg in lock_data["package"]:
         deps = []
         for dep_name in pkg.get("dependencies", {}).keys():
-            deps.append(_normalize(dep_name))
+            deps.append(normalize(dep_name))
 
         files = []
         for f in pkg.get("files", []):
@@ -160,64 +64,6 @@ def poetry_packages(lock_data: dict) -> list[Package]:
         ))
     return result
 
-_HEX_DIGITS = "0123456789abcdefABCDEF"
-
-# Characters a wheel filename can contain: names and tags are `[A-Za-z0-9._]`,
-# versions add `+` (local) and `!` (epoch), and `-` separates the parts. All of
-# them are valid in a target name.
-_WHEEL_FILENAME_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-+!"
-
-def _percent_decode(s: str) -> str:
-    """Decode `%XX` escapes, e.g. the `%2B` in PyTorch's `torch-2.11.0%2Bcpu-...whl`.
-
-    Only escapes of characters that can appear in a wheel filename are accepted.
-    Anything else, like `%2F` (`/`) or `%25` (`%`), would decode into an invalid
-    target name, and decoding a UTF-8 byte sequence one byte per character would
-    silently produce garbage.
-    """
-    chunks = s.split("%")
-    decoded = [chunks[0]]
-    for chunk in chunks[1:]:
-        escape = chunk[:2]
-        if len(escape) != 2 or escape[0] not in _HEX_DIGITS or escape[1] not in _HEX_DIGITS:
-            fail("Malformed percent escape `%{}` in `{}`".format(escape, s))
-        byte = int(escape, 16)
-        if byte >= 0x80:
-            fail("Non-ASCII percent escape `%{}` in `{}`".format(escape, s))
-        char = chr(byte)
-        if char not in _WHEEL_FILENAME_CHARS:
-            fail("Percent escape `%{}` in `{}` decodes to {}, which cannot appear in a wheel filename".format(escape, s, repr(char)))
-        decoded.append(char + chunk[2:])
-    return "".join(decoded)
-
-def _url_filename(url: str) -> str:
-    """Extract the filename from a URL, decoded: a target name cannot contain `%`.
-
-    Drops any query string or fragment first, e.g. the signature on a
-    pre-signed S3 URL, which would otherwise hide the `.whl` suffix.
-    """
-    path = url.split("#", 1)[0].split("?", 1)[0]
-    return _percent_decode(path.rsplit("/", 1)[-1])
-
-def _multi_version_set(lock_data: dict) -> dict:
-    """Return {normalized_name: True} for packages that appear with multiple versions."""
-    counts = {}
-    for pkg in lock_data["package"]:
-        source = pkg.get("source", {})
-        if type(source) == "dict" and (source.get("virtual") != None or source.get("editable") != None):
-            continue
-        n = _normalize(pkg["name"])
-        counts[n] = counts.get(n, 0) + 1
-    return {n: True for n, c in counts.items() if c > 1}
-
-def _versioned_dep_name(dep: dict, multi_version: dict) -> str:
-    """Return the target name for a dep entry, versioned when the dep has multiple versions."""
-    name = _normalize(dep["name"])
-    version = dep.get("version")
-    if version != None and multi_version.get(name):
-        return "{}-{}".format(name, version)
-    return name
-
 def uv_packages(lock_data: dict) -> list[Package]:
     """Adapt uv.lock data (loaded as TOML) into the elk package list.
 
@@ -228,7 +74,7 @@ def uv_packages(lock_data: dict) -> list[Package]:
     ``{name}-{version}`` instead of the plain ``{name}``. Dep references use the
     same versioned names so the graph remains consistent.
     """
-    multi_version = _multi_version_set(lock_data)
+    multi_version = multi_version_set(lock_data)
 
     result = []
     for pkg in lock_data["package"]:
@@ -237,12 +83,12 @@ def uv_packages(lock_data: dict) -> list[Package]:
         if type(source) == "dict" and (source.get("virtual") != None or source.get("editable") != None):
             continue
 
-        deps = [_versioned_dep_name(dep, multi_version) for dep in pkg.get("dependencies", [])]
+        deps = [versioned_dep_name(dep, multi_version) for dep in pkg.get("dependencies", [])]
 
         files = []
         for w in pkg.get("wheels", []):
             files.append(WheelFile(
-                file = _url_filename(w["url"]),
+                file = url_filename(w["url"]),
                 hash = w["hash"],
                 url = w["url"],
             ))
@@ -280,12 +126,8 @@ def uv_workspace_aliases(lock_data: dict, visibility: list[str] = ["PUBLIC"]):
         if type(source) == "dict":
             path = source.get("editable")
             if path != None and path != ".":
-                members[_normalize(pkg["name"])] = path
+                members[normalize(pkg["name"])] = path
     _elk_workspace_aliases(members, visibility)
-
-def _module_name(name: str) -> str:
-    """Derive the Python module name from a package name (hyphens/dots → underscores)."""
-    return name.lower().replace("-", "_").replace(".", "_")
 
 def create_workspace_member_macro(
         *,
@@ -328,11 +170,11 @@ def create_workspace_member_macro(
     """
 
     # Single pass: build {normalized_name: [dep_label, ...]} for all packages.
-    multi_version = _multi_version_set(lock_data)
+    multi_version = multi_version_set(lock_data)
     all_deps = {}
     for pkg in lock_data["package"]:
-        all_deps[_normalize(pkg["name"])] = [
-            "{}:{}".format(root, _versioned_dep_name(dep, multi_version))
+        all_deps[normalize(pkg["name"])] = [
+            "{}:{}".format(root, versioned_dep_name(dep, multi_version))
             for dep in pkg.get("dependencies", [])
         ]
 
@@ -352,11 +194,11 @@ def uv_deps(lock_data: dict, name: str) -> list[str]:
         lock_data: Parsed uv.lock TOML data.
         name: Normalised package name to look up.
     """
-    multi_version = _multi_version_set(lock_data)
+    multi_version = multi_version_set(lock_data)
     for pkg in lock_data["package"]:
-        if _normalize(pkg["name"]) == _normalize(name):
+        if normalize(pkg["name"]) == normalize(name):
             return [
-                ":{}".format(_versioned_dep_name(dep, multi_version))
+                ":{}".format(versioned_dep_name(dep, multi_version))
                 for dep in pkg.get("dependencies", [])
             ]
     return []
@@ -390,12 +232,12 @@ def _uv_workspace_member(*, name: str, deps: dict, root: str, src_root: str, ver
                    priority over the workspace-wide ``version``.
         **kwargs: Passed through to python_library (e.g. visibility).
     """
-    if name != _normalize(name):
-        fail("name must be normalised so it can be referenced by other packages in the workspace (got '{}', expected '{}')".format(name, _normalize(name)))
+    if name != normalize(name):
+        fail("name must be normalised so it can be referenced by other packages in the workspace (got '{}', expected '{}')".format(name, normalize(name)))
     if src_root:
         srcs = {p.removeprefix(src_root + "/"): p for p in glob([src_root + "/**/*.py"])}
     else:
-        mod = module if module != None else _module_name(name)
+        mod = module if module != None else module_name(name)
         srcs = {p: p for p in glob([mod + "/**/*.py"])}
 
     # Resolve version: pyproject static version > workspace-wide fallback.
@@ -409,7 +251,7 @@ def _uv_workspace_member(*, name: str, deps: dict, root: str, src_root: str, ver
 
     # Generate dist-info/METADATA so importlib.metadata.version() works.
     if effective_version != None:
-        dist_name = _module_name(name)
+        dist_name = module_name(name)
         metadata_target = name + "-dist-info-metadata"
         native.genrule(
             name = metadata_target,
@@ -486,12 +328,12 @@ def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], p
     # versioned alias names (e.g. :huggingface-hub-1.3.4) and avoid conflicts.
     version_counts = {}
     for pkg in packages:
-        n = _normalize(pkg.name)
+        n = normalize(pkg.name)
         version_counts[n] = version_counts.get(n, 0) + 1
     multi_version = {n: True for n, c in version_counts.items() if c > 1}
 
     def _alias_name(pkg):
-        n = _normalize(pkg.name)
+        n = normalize(pkg.name)
         if multi_version.get(n):
             return "{}-{}".format(n, pkg.version)
         return n
@@ -503,7 +345,7 @@ def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], p
     known = {}
     for pkg in packages:
         for tags in platform_tags.values():
-            if _choose_wheel(pkg.files, tags) != None:
+            if choose_wheel(pkg.files, tags) != None:
                 known[_alias_name(pkg)] = True
                 break
 
@@ -515,7 +357,7 @@ def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], p
         all_chosen = {}  # filename -> WheelFile (dedup)
 
         for plat_name, tags in platform_tags.items():
-            chosen = _choose_wheel(pkg.files, tags)
+            chosen = choose_wheel(pkg.files, tags)
             if chosen != None:
                 platform_chosen[plat_name] = chosen
                 all_chosen[chosen.file] = chosen
@@ -533,7 +375,7 @@ def elk_packages(packages: list[Package], platform_tags: dict[str, list[str]], p
 
             downloader(
                 name = filename,
-                urls = [_wheel_url(wf)],
+                urls = [wheel_url(wf)],
                 sha256 = sha,
             )
             bname = filename + "-built"

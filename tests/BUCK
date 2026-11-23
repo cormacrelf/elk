@@ -1,0 +1,8 @@
+# Tests run while this package is evaluated: `buck2 targets //tests/...`.
+# See tests/run.sh, which CI runs via test.sh.
+
+load(":elk_packages_test.bzl", "test_elk_packages")
+load(":unit_tests.bzl", "run_unit_tests")
+
+run_unit_tests()
+test_elk_packages()

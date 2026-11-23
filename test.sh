@@ -3,6 +3,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+# Starlark tests: fast and offline, so run them before the example builds
+tests/run.sh
+
 # Generate tags file for the current platform
 buck2 run elk//tools:save_tags example/poetry/linux-x86_64.tags.json
 buck2 run elk//tools:save_tags example/uv/linux-x86_64.tags.json
